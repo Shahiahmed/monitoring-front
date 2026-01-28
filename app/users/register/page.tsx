@@ -13,6 +13,7 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
     passwordHint: "",
+    role: "USER",
     active: true,
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -121,6 +122,7 @@ export default function RegisterPage() {
       formDataToSend.append("second_name", formData.secondName);
       formDataToSend.append("password", formData.password);
       formDataToSend.append("password_hint", formData.passwordHint);
+      formDataToSend.append("role", formData.role);
       formDataToSend.append("active", String(formData.active));
 
       // В реальном приложении здесь будет запрос к API
@@ -405,6 +407,28 @@ export default function RegisterPage() {
                     </p>
                   )}
               </div>
+            </div>
+
+            {/* Роль */}
+            <div>
+              <label
+                htmlFor="role"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Роль <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="role"
+                name="role"
+                value={formData.role}
+                onChange={handleInputChange}
+                className="block w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
+                required
+              >
+                <option value="USER">Пользователь</option>
+                <option value="ADMIN">Админ</option>
+                <option value="SUPER_ADMIN">Супер админ</option>
+              </select>
             </div>
 
             {/* Подсказка пароля и Активен */}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { LanguageProvider } from "./components/LanguageProvider";
 import ConditionalLayout from "./components/ConditionalLayout";
 
 const geistSans = Geist({
@@ -54,11 +55,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen overflow-x-hidden`}
       >
         <ThemeProvider>
-          <div className="flex flex-col min-h-screen">
-            <ConditionalLayout>
-              {children}
-            </ConditionalLayout>
-          </div>
+          <LanguageProvider>
+            <div className="flex flex-col min-h-screen">
+              <ConditionalLayout>
+                {children}
+              </ConditionalLayout>
+            </div>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

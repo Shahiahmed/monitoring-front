@@ -1,25 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-
-type Language = 'ru' | 'kz';
+import { useLanguage } from './LanguageProvider';
 
 export default function LanguageToggle() {
-  const [language, setLanguage] = useState<Language>('ru');
-
-  useEffect(() => {
-    // Загружаем сохраненный язык из localStorage
-    const savedLanguage = localStorage.getItem('language') as Language | null;
-    if (savedLanguage && (savedLanguage === 'ru' || savedLanguage === 'kz')) {
-      setLanguage(savedLanguage);
-    }
-  }, []);
+  const { language, setLanguage } = useLanguage();
 
   const toggleLanguage = () => {
     const newLanguage = language === 'ru' ? 'kz' : 'ru';
     setLanguage(newLanguage);
-    localStorage.setItem('language', newLanguage);
-    // Здесь можно добавить логику для изменения языка в приложении
   };
 
   return (

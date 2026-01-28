@@ -4,9 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "../components/ThemeToggle";
 import LanguageToggle from "../components/LanguageToggle";
+import { useLanguage } from "../components/LanguageProvider";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -24,7 +26,7 @@ export default function LoginPage() {
         // В реальном приложении здесь будет запрос к API
         router.push("/");
       } else {
-        setError("Пожалуйста, заполните все поля");
+        setError(t("login.errorFillFields"));
       }
       setIsLoading(false);
     }, 1000);
@@ -97,7 +99,7 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Войдите в систему мониторинга
+            {t("login.title")}
           </h1>
           {/* <p className="text-gray-600 dark:text-gray-400">
             Войдите в систему мониторинга
@@ -118,7 +120,7 @@ export default function LoginPage() {
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
-                Email
+                {t("login.email")}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -170,14 +172,14 @@ export default function LoginPage() {
                     }
                   }}
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  placeholder="example@enbek.kz"
+                  placeholder={t("login.emailPlaceholder")}
                   pattern="[a-zA-Z0-9._%+-]+@enbek\.kz"
-                  title="Введите email в формате example@enbek.kz"
+                  title={t("login.emailTitle")}
                   required
                 />
               </div>
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Используйте корпоративный email: example@enbek.kz
+                {t("login.emailHint")}
               </p>
             </div>
 
@@ -186,7 +188,7 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
-                Пароль
+                {t("login.password")}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -210,7 +212,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  placeholder="Введите пароль"
+                  placeholder={t("login.passwordPlaceholder")}
                   required
                 />
                 <button
@@ -267,7 +269,7 @@ export default function LoginPage() {
                 htmlFor="remember"
                 className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
               >
-                Запомнить меня
+                {t("login.rememberMe")}
               </label>
             </div>
 
@@ -298,10 +300,10 @@ export default function LoginPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  Вход...
+                  {t("login.entering")}
                 </>
               ) : (
-                "Войти"
+                t("login.enter")
               )}
             </button>
           </form>

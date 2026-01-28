@@ -1,0 +1,15 @@
+{
+  "login": {
+    "title": "Войдите в систему мониторинга",
+    "email": "Email",
+    "password": "Пароль",
+    "rememberMe": "Запомнить меня",
+    "enter": "Войти",
+    "entering": "Вход...",
+    "emailPlaceholder": "example@enbek.kz",
+    "passwordPlaceholder": "Введите пароль",
+    "emailHint": "Используйте корпоративный email: example@enbek.kz",
+    "emailTitle": "Введите email в формате example@enbek.kz",
+    "errorFillFields": "Пожалуйста, заполните все поля"
+  }
+}

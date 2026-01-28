@@ -11,6 +11,7 @@ interface User {
   firstName: string;
   lastName: string;
   secondName?: string;
+  role: string;
   active: boolean;
   registrationDate: string;
   lastLoginDate?: string;
@@ -31,6 +32,7 @@ export default function UsersPage() {
       firstName: "Иван",
       lastName: "Иванов",
       secondName: "Иванович",
+      role: "SUPER_ADMIN",
       active: true,
       registrationDate: "2024-01-15",
       lastLoginDate: "2025-01-25",
@@ -40,6 +42,7 @@ export default function UsersPage() {
       email: "petrov@enbek.kz",
       firstName: "Петр",
       lastName: "Петров",
+      role: "ADMIN",
       active: true,
       registrationDate: "2024-02-20",
       lastLoginDate: "2025-01-24",
@@ -50,6 +53,7 @@ export default function UsersPage() {
       firstName: "Сидор",
       lastName: "Сидоров",
       secondName: "Сидорович",
+      role: "USER",
       active: false,
       registrationDate: "2024-03-10",
     },
@@ -58,6 +62,7 @@ export default function UsersPage() {
       email: "smirnov@enbek.kz",
       firstName: "Алексей",
       lastName: "Смирнов",
+      role: "USER",
       active: true,
       registrationDate: "2024-04-05",
       lastLoginDate: "2025-01-23",
@@ -68,6 +73,7 @@ export default function UsersPage() {
       firstName: "Дмитрий",
       lastName: "Козлов",
       secondName: "Дмитриевич",
+      role: "ADMIN",
       active: true,
       registrationDate: "2024-05-12",
       lastLoginDate: "2025-01-22",
@@ -77,6 +83,7 @@ export default function UsersPage() {
       email: "novikov@enbek.kz",
       firstName: "Сергей",
       lastName: "Новиков",
+      role: "USER",
       active: false,
       registrationDate: "2024-06-18",
     },
@@ -86,6 +93,7 @@ export default function UsersPage() {
       firstName: "Андрей",
       lastName: "Морозов",
       secondName: "Андреевич",
+      role: "USER",
       active: true,
       registrationDate: "2024-07-22",
       lastLoginDate: "2025-01-21",
@@ -95,6 +103,7 @@ export default function UsersPage() {
       email: "volkov@enbek.kz",
       firstName: "Максим",
       lastName: "Волков",
+      role: "USER",
       active: true,
       registrationDate: "2024-08-30",
       lastLoginDate: "2025-01-20",
@@ -105,6 +114,7 @@ export default function UsersPage() {
       firstName: "Владимир",
       lastName: "Алексеев",
       secondName: "Владимирович",
+      role: "ADMIN",
       active: true,
       registrationDate: "2024-09-14",
       lastLoginDate: "2025-01-19",
@@ -114,6 +124,7 @@ export default function UsersPage() {
       email: "lebedev@enbek.kz",
       firstName: "Николай",
       lastName: "Лебедев",
+      role: "USER",
       active: false,
       registrationDate: "2024-10-08",
     },
@@ -123,6 +134,7 @@ export default function UsersPage() {
       firstName: "Павел",
       lastName: "Семенов",
       secondName: "Павлович",
+      role: "USER",
       active: true,
       registrationDate: "2024-11-25",
       lastLoginDate: "2025-01-18",
@@ -132,6 +144,7 @@ export default function UsersPage() {
       email: "egorov@enbek.kz",
       firstName: "Роман",
       lastName: "Егоров",
+      role: "USER",
       active: true,
       registrationDate: "2024-12-03",
       lastLoginDate: "2025-01-17",
@@ -262,6 +275,9 @@ export default function UsersPage() {
                     ФИО
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Роль
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Статус
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -279,7 +295,7 @@ export default function UsersPage() {
                 {paginatedUsers.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400"
                     >
                       Пользователи не найдены
@@ -289,7 +305,7 @@ export default function UsersPage() {
                   paginatedUsers.map((user) => (
                     <tr
                       key={user.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      className="hover:bg-white dark:hover:bg-gray-800 transition-colors"
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {user.email}
@@ -301,9 +317,26 @@ export default function UsersPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            user.role === "SUPER_ADMIN"
+                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                              : user.role === "ADMIN"
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                              : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
+                          }`}
+                        >
+                          {user.role === "SUPER_ADMIN"
+                            ? "Супер админ"
+                            : user.role === "ADMIN"
+                            ? "Админ"
+                            : "Пользователь"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             user.active
                               ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                              : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400"
+                              : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
                           }`}
                         >
                           {user.active ? "Активен" : "Неактивен"}

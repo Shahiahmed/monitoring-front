@@ -1,0 +1,15 @@
+{
+  "login": {
+    "title": "Мониторинг жүйесіне кіріңіз",
+    "email": "Email",
+    "password": "Құпия сөз",
+    "rememberMe": "Мені есте сақтау",
+    "enter": "Кіру",
+    "entering": "Кіру...",
+    "emailPlaceholder": "example@enbek.kz",
+    "passwordPlaceholder": "Құпия сөзді енгізіңіз",
+    "emailHint": "Корпоративті email пайдаланыңыз: example@enbek.kz",
+    "emailTitle": "Email-ді example@enbek.kz форматында енгізіңіз",
+    "errorFillFields": "Барлық өрістерді толтырыңыз"
+  }
+}
