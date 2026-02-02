@@ -115,12 +115,28 @@ export default function Sidebar() {
     setMounted(true);
   }, [pathname]);
 
+  // Вычисляем, какие пункты должны быть раскрыты по текущему пути
+  const getExpandedItemsForPath = () => {
+    const expanded = new Set<string>();
+    navigation.forEach((item) => {
+      if (item.children && item.children.some((child) => pathname === child.href)) {
+        expanded.add(item.name);
+      }
+    });
+    return expanded;
+  };
+
   const toggleSidebar = () => {
     const newState = !collapsed;
     setCollapsed(newState);
     localStorage.setItem('sidebarCollapsed', String(newState));
-    // Плавное изменение ширины через CSS переменную
     document.documentElement.style.setProperty('--sidebar-width', newState ? '4rem' : '16rem');
+    // При сворачивании — закрываем все подменю; при разворачивании — раскрываем только по текущему пути
+    if (newState) {
+      setExpandedItems(new Set());
+    } else {
+      setExpandedItems(getExpandedItemsForPath());
+    }
   };
 
   const toggleExpanded = (itemName: string) => {
@@ -165,40 +181,13 @@ export default function Sidebar() {
   };
 
   return (
-    <aside
-      suppressHydrationWarning
-      style={{ width: 'var(--sidebar-width, 16rem)' }}
-      className="sidebar-scroll bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 h-[calc(100vh-4rem)] fixed left-0 top-16 overflow-y-auto overflow-x-hidden z-40 transition-[width] duration-300 ease-in-out flex flex-col"
-    >
-      <div className="flex flex-col flex-1 min-w-0 py-4">
-        {/* Строка: кнопка сворачивания — иконка и текст в одном ряду */}
-        <div className="flex items-center min-h-12 px-1">
-          <div className="w-16 flex-shrink-0 flex justify-center">
-            <button
-              onClick={toggleSidebar}
-              className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              aria-label={displayCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
-              title={displayCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
-            >
-              <svg
-                className={`w-5 h-5 text-gray-600 dark:text-gray-400 transition-transform duration-200 ${displayCollapsed ? '' : 'rotate-180'}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-              </svg>
-            </button>
-          </div>
-          <div className="overflow-hidden transition-[width] duration-300 ease-in-out flex items-center" style={textColumnStyle}>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap py-2">
-              Меню
-            </span>
-          </div>
-        </div>
-
-        <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-800" />
-
+    <>
+      <aside
+        suppressHydrationWarning
+        style={{ width: 'var(--sidebar-width, 16rem)' }}
+        className="sidebar-scroll bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 h-[calc(100vh-4rem)] fixed left-0 top-16 overflow-y-auto overflow-x-hidden z-40 transition-[width] duration-300 ease-in-out flex flex-col group/sidebar"
+      >
+        <div className="flex flex-col flex-1 min-w-0 py-4">
         {/* Пункты меню — каждая строка: иконка и текст в одном ряду */}
         <nav className="flex-1 space-y-1">
           {navigation.map((item) => {
@@ -330,6 +319,25 @@ export default function Sidebar() {
           </div>
         </div>
       </div>
-    </aside>
+      </aside>
+
+      {/* Плавающая таблетка на границе сайдбар / контент */}
+      <button
+        onClick={toggleSidebar}
+        style={{ left: 'calc(var(--sidebar-width) - 14px)', top: 'calc(2rem + 50vh)' }}
+        className="fixed -translate-y-1/2 w-7 h-14 rounded-full flex items-center justify-center bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 shadow-md z-50 transition-[left,transform] duration-300 ease-in-out hover:scale-105"
+        aria-label={displayCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
+        title={displayCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
+      >
+        <svg
+          className={`w-4 h-4 text-gray-600 dark:text-gray-300 transition-transform duration-200 ${displayCollapsed ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+    </>
   );
 }
