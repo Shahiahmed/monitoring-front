@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { apiUrl } from "@/app/lib/api";
 
 const SSL_EXT = [".p12", ".pfx", ".cer", ".crt", ".pem"];
 const ECP_EXT = [".p12", ".pfx", ".key", ".cer", ".crt", ".pem"];
 const MAX_MB = 10;
-const API_BASE = "http://localhost:8081";
 
 type TabId = "ssl" | "ecp";
 
@@ -122,7 +122,7 @@ export default function SslPage() {
 
   async function handleDelete(id: number) {
     try {
-      const res = await fetch(`${API_BASE}/api/settings/certificates/${id}`, { method: "DELETE" });
+      const res = await fetch(apiUrl(`settings/certificates/${id}`), { method: "DELETE" });
       if (res.ok) {
         setCertificates((prev) => prev.filter((c) => c.id !== id));
         setSuccess("Сертификат удалён.");
@@ -139,7 +139,7 @@ export default function SslPage() {
   async function loadCertificates() {
     setLoadingList(true);
     try {
-      const res = await fetch(`${API_BASE}/api/settings/certificates`);
+      const res = await fetch(apiUrl("settings/certificates"));
       if (res.ok) {
         const data = await res.json();
         setCertificates(Array.isArray(data) ? data : []);
@@ -192,7 +192,7 @@ export default function SslPage() {
       const formData = new FormData();
       formData.append("file", sslFile!);
       formData.append("password", sslPassword);
-      const res = await fetch(`${API_BASE}/api/settings/certificates/ssl`, {
+      const res = await fetch(apiUrl("settings/certificates/ssl"), {
         method: "POST",
         body: formData,
       });
@@ -221,7 +221,7 @@ export default function SslPage() {
     try {
       const formData = new FormData();
       formData.append("file", ecpFile!);
-      const res = await fetch(`${API_BASE}/api/settings/certificates/ecp`, {
+      const res = await fetch(apiUrl("settings/certificates/ecp"), {
         method: "POST",
         body: formData,
       });

@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import ThemeToggle from "./ThemeToggle";
 import LanguageToggle from "./LanguageToggle";
 import Link from "next/link";
-
-const API_BASE = "http://localhost:8081";
+import { apiUrl } from "@/app/lib/api";
 
 interface CertSummary {
   type: string;
@@ -25,7 +24,7 @@ export default function Header() {
   const [ecpSummary, setEcpSummary] = useState<CertSummary | null>(null);
 
   function loadCertificates() {
-    fetch(`${API_BASE}/api/settings/certificates`)
+    fetch(apiUrl("settings/certificates"))
       .then((res) => (res.ok ? res.json() : []))
       .then((list: { type: string; validTo: string | null }[]) => {
         if (!Array.isArray(list)) return;
