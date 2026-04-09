@@ -1,8 +1,16 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import ruTranslations from "../locales/ru.json";
+import kzTranslations from "../locales/kz.json";
 
-type Language = 'ru' | 'kz';
+type Language = "ru" | "kz";
 
 interface LanguageContextType {
   language: Language;
@@ -10,56 +18,35 @@ interface LanguageContextType {
   t: (key: string) => string;
 }
 
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+const LanguageContext = createContext<LanguageContextType | undefined>(
+  undefined,
+);
 
-// Переводы
-const translations: Record<Language, any> = {
-  ru: {
-    login: {
-      title: "Войдите в систему мониторинга",
-      email: "Email",
-      password: "Пароль",
-      rememberMe: "Запомнить меня",
-      enter: "Войти",
-      entering: "Вход...",
-      emailPlaceholder: "example@enbek.kz",
-      passwordPlaceholder: "Введите пароль",
-      emailHint: "Используйте корпоративный email: example@enbek.kz",
-      emailTitle: "Введите email в формате example@enbek.kz",
-      errorFillFields: "Пожалуйста, заполните все поля"
-    }
-  },
-  kz: {
-    login: {
-      title: "Мониторинг жүйесіне кіріңіз",
-      email: "Email",
-      password: "Құпия сөз",
-      rememberMe: "Мені есте сақтау",
-      enter: "Кіру",
-      entering: "Кіру...",
-      emailPlaceholder: "example@enbek.kz",
-      passwordPlaceholder: "Құпия сөзді енгізіңіз",
-      emailHint: "Корпоративті email пайдаланыңыз: example@enbek.kz",
-      emailTitle: "Email-ді example@enbek.kz форматында енгізіңіз",
-      errorFillFields: "Барлық өрістерді толтырыңыз"
-    }
-  }
+interface TranslationTree {
+  [key: string]: string | TranslationTree;
+}
+
+type TranslationNode = string | TranslationTree;
+
+const translations: Record<Language, TranslationNode> = {
+  ru: ruTranslations as TranslationNode,
+  kz: kzTranslations as TranslationNode,
 };
 
 // Функция для получения перевода по ключу (например, "login.title")
 const getTranslation = (lang: Language, key: string): string => {
-  const keys = key.split('.');
-  let value: any = translations[lang];
-  
+  const keys = key.split(".");
+  let value: TranslationNode = translations[lang];
+
   for (const k of keys) {
-    if (value && typeof value === 'object' && k in value) {
-      value = value[k];
+    if (typeof value === "object" && value !== null && k in value) {
+      value = (value as TranslationTree)[k];
     } else {
       // Если перевод не найден, возвращаем русский вариант или сам ключ
       value = translations.ru;
       for (const k2 of keys) {
-        if (value && typeof value === 'object' && k2 in value) {
-          value = value[k2];
+        if (typeof value === "object" && value !== null && k2 in value) {
+          value = (value as TranslationTree)[k2];
         } else {
           return key;
         }
@@ -67,26 +54,23 @@ const getTranslation = (lang: Language, key: string): string => {
       break;
     }
   }
-  
-  return typeof value === 'string' ? value : key;
+
+  return typeof value === "string" ? value : key;
 };
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('ru');
-  const [mounted, setMounted] = useState(false);
+  const [language, setLanguageState] = useState<Language>("ru");
 
   useEffect(() => {
-    // Загружаем сохраненный язык из localStorage
-    const savedLanguage = localStorage.getItem('language') as Language | null;
-    if (savedLanguage && (savedLanguage === 'ru' || savedLanguage === 'kz')) {
+    const savedLanguage = localStorage.getItem("language") as Language | null;
+    if (savedLanguage === "ru" || savedLanguage === "kz") {
       setLanguageState(savedLanguage);
     }
-    setMounted(true);
   }, []);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem('language', lang);
+    localStorage.setItem("language", lang);
   };
 
   const t = (key: string): string => {
@@ -103,7 +87,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 export function useLanguage() {
   const context = useContext(LanguageContext);
   if (context === undefined) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
+    throw new Error("useLanguage must be used within a LanguageProvider");
   }
   return context;
 }

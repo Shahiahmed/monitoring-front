@@ -1,7 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "../../lib/api";
+
+interface AuthUser {
+  roles?: string[];
+}
+
+function isAdminOrSuperAdmin(user: AuthUser | null): boolean {
+  const roles = user?.roles ?? [];
+  return roles.includes("SUPER_ADMIN") || roles.includes("ADMIN");
+}
+
+function isSuperAdmin(user: AuthUser | null): boolean {
+  return (user?.roles ?? []).includes("SUPER_ADMIN");
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -21,6 +35,46 @@ export default function RegisterPage() {
   const [showPasswordHint, setShowPasswordHint] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  /** null — проверка прав; true — можно показать форму */
+  const [accessAllowed, setAccessAllowed] = useState<boolean | null>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem("authUser");
+      return raw ? (JSON.parse(raw) as AuthUser) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("authUser") : null;
+      if (!raw) {
+        router.replace("/login");
+        return;
+      }
+      const parsed = JSON.parse(raw) as AuthUser;
+      setCurrentUser(parsed);
+      if (!isAdminOrSuperAdmin(parsed)) {
+        router.replace("/users");
+        return;
+      }
+      setAccessAllowed(true);
+    } catch {
+      router.replace("/login");
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (
+      currentUser &&
+      !isSuperAdmin(currentUser) &&
+      formData.role === "SUPER_ADMIN"
+    ) {
+      setFormData((prev) => ({ ...prev, role: "USER" }));
+    }
+  }, [currentUser, formData.role]);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -116,41 +170,58 @@ export default function RegisterPage() {
 
     setIsLoading(true);
 
-    // Здесь будет запрос к API
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append("email", formData.email);
-      formDataToSend.append("first_name", formData.firstName);
-      formDataToSend.append("last_name", formData.lastName);
-      formDataToSend.append("second_name", formData.secondName);
-      formDataToSend.append("password", formData.password);
-      formDataToSend.append("password_hint", formData.passwordHint);
-      formDataToSend.append("role", formData.role);
-      formDataToSend.append("active", String(formData.active));
+      const payload: Record<string, unknown> = {
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        secondName: formData.secondName || null,
+        password: formData.password,
+        passwordHint: formData.passwordHint || null,
+        active: formData.active,
+        roleCode: formData.role,
+      };
 
-      // В реальном приложении здесь будет запрос к API
-      // const response = await fetch('/api/users/register', {
-      //   method: 'POST',
-      //   body: formDataToSend,
-      // });
+      const response = await apiFetch("users/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-      // Имитация запроса
-      setTimeout(() => {
+      if (!response.ok) {
+        const message =
+          (await response.text()) || "Ошибка при регистрации пользователя";
+        setError(message);
         setIsLoading(false);
-        router.push("/users");
-      }, 1000);
+        return;
+      }
+
+      setIsLoading(false);
+      router.push("/users");
     } catch (err) {
       setError("Ошибка при регистрации пользователя");
       setIsLoading(false);
     }
   };
 
+  if (accessAllowed !== true) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Проверка доступа…
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
-      <div className="max-w-4xl  px-6 py-12">
+    <div className="min-h-screen">
+      <div className="w-full px-4 py-8 sm:px-6 sm:py-10">
         {/* Заголовок */}
         <div className="mb-10">
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-h1 text-gray-900 dark:text-white mb-2 tracking-tight">
             Регистрация пользователя
           </h1>
           {/* <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -159,7 +230,7 @@ export default function RegisterPage() {
         </div>
 
         {/* Форма */}
-        <div>
+        <div className="rounded-xl border border-slate-200/80 bg-white/75 p-5 shadow-card backdrop-blur sm:p-6 dark:border-slate-700 dark:bg-slate-900/40">
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Email */}
             <div>
@@ -176,7 +247,7 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={handleInputChange}
                 onBlur={handleEmailBlur}
-                className="block w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
+                className="block w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded bg-slate-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
                 placeholder="example@enbek.kz"
                 pattern="[a-zA-Z0-9._%+-]+@enbek\.kz"
                 title="Введите email в формате example@enbek.kz"
@@ -202,7 +273,7 @@ export default function RegisterPage() {
                   type="text"
                   value={formData.firstName}
                   onChange={handleInputChange}
-                  className="block w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
+                  className="block w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded bg-slate-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
                   placeholder="Имя"
                   required
                 />
@@ -220,7 +291,7 @@ export default function RegisterPage() {
                   type="text"
                   value={formData.lastName}
                   onChange={handleInputChange}
-                  className="block w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
+                  className="block w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded bg-slate-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
                   placeholder="Фамилия"
                   required
                 />
@@ -238,7 +309,7 @@ export default function RegisterPage() {
                   type="text"
                   value={formData.secondName}
                   onChange={handleInputChange}
-                  className="block w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
+                  className="block w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded bg-slate-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
                   placeholder="Отчество"
                 />
               </div>
@@ -283,7 +354,7 @@ export default function RegisterPage() {
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="block w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
+                    className="block w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-700 rounded bg-slate-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
                     placeholder="Введите пароль (минимум 6 символов)"
                     required
                   />
@@ -350,7 +421,7 @@ export default function RegisterPage() {
                     type={showConfirmPassword ? "text" : "password"}
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className="block w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
+                    className="block w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-700 rounded bg-slate-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
                     placeholder="Повторите пароль"
                     required
                   />
@@ -412,7 +483,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Роль */}
+            {/* Роль: супер-админ — все роли; обычный админ — только пользователь или админ */}
             <div>
               <label
                 htmlFor="role"
@@ -425,13 +496,20 @@ export default function RegisterPage() {
                 name="role"
                 value={formData.role}
                 onChange={handleInputChange}
-                className="block w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
+                className="block w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded bg-slate-100 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
                 required
               >
                 <option value="USER">Пользователь</option>
                 <option value="ADMIN">Админ</option>
-                <option value="SUPER_ADMIN">Супер админ</option>
+                {isSuperAdmin(currentUser) && (
+                  <option value="SUPER_ADMIN">Супер админ</option>
+                )}
               </select>
+              {!isSuperAdmin(currentUser) && (
+                <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  Роль «Супер админ» может назначить только супер-администратор.
+                </p>
+              )}
             </div>
 
             {/* Подсказка пароля и Активен */}
@@ -480,7 +558,7 @@ export default function RegisterPage() {
                     value={formData.passwordHint}
                     onChange={handleInputChange}
                     rows={2}
-                    className="block w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500 resize-none"
+                    className="block w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded bg-slate-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500 resize-none"
                     placeholder="Введите подсказку для восстановления пароля"
                   />
                 </div>
@@ -508,7 +586,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-medium rounded hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <span className="flex items-center">

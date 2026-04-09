@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import ThemeToggle from "../components/ThemeToggle";
 import LanguageToggle from "../components/LanguageToggle";
 import { useLanguage } from "../components/LanguageProvider";
+import { apiFetch } from "../lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,26 +21,56 @@ export default function LoginPage() {
     setError("");
     setIsLoading(true);
 
-    // Имитация запроса на сервер
-    setTimeout(() => {
-      if (email && password) {
-        // В реальном приложении здесь будет запрос к API
-        router.push("/");
-      } else {
-        setError(t("login.errorFillFields"));
+    try {
+      const response = await apiFetch("auth/login", {
+        method: "POST",
+        skipAuth: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const msg = await response.text();
+        setError(msg || t("login.errorFillFields"));
+        setIsLoading(false);
+        return;
       }
+
+      const data = await response.json();
+      // Сохраняем "сессию" на клиенте
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("authUser", JSON.stringify(data.user));
+      sessionStorage.setItem("justLoggedIn", "1");
+
       setIsLoading(false);
-    }, 1000);
+      router.push("/");
+    } catch (err) {
+      setError("Ошибка при входе. Попробуйте ещё раз.");
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden p-4">
+      <div className="pointer-events-none absolute inset-0 -z-10 login-bg-motion" aria-hidden>
+        <div className="absolute inset-0 login-bg-base" />
+        <div className="absolute -left-[10%] top-[8%] h-[min(520px,85vw)] w-[min(520px,85vw)] rounded-full bg-blue-500/25 blur-3xl dark:bg-blue-500/20 login-orb login-orb-a" />
+        <div className="absolute -right-[8%] bottom-[12%] h-[min(480px,80vw)] w-[min(480px,80vw)] rounded-full bg-cyan-400/22 blur-3xl dark:bg-cyan-400/16 login-orb login-orb-b" />
+        <div className="absolute left-1/2 top-1/2 h-[min(400px,70vw)] w-[min(400px,70vw)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/18 blur-3xl dark:bg-indigo-400/14 login-orb login-orb-c" />
+        <div className="absolute left-1/2 top-1/2 h-[min(640px,95vw)] w-[min(640px,95vw)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-conic-180 from-blue-500/20 via-cyan-400/15 to-indigo-500/20 blur-3xl dark:from-blue-500/14 dark:via-cyan-500/12 dark:to-violet-500/14 animate-[login-conic_22s_linear_infinite]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(100,116,139,0.14)_1px,transparent_1px),linear-gradient(to_bottom,rgba(100,116,139,0.14)_1px,transparent_1px)] bg-size-[48px_48px] animate-[login-grid-drift_48s_linear_infinite] dark:bg-[linear-gradient(to_right,rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.12)_1px,transparent_1px)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,transparent_0%,rgba(248,250,252,0.85)_100%)] dark:bg-[radial-gradient(ellipse_75%_55%_at_50%_45%,transparent_0%,rgba(15,23,42,0.72)_100%)]" />
+        <div className="absolute -inset-y-32 -left-[20%] w-[55%] rotate-15 bg-linear-to-r from-transparent via-white/55 to-transparent opacity-45 dark:via-white/18 dark:opacity-35 animate-[login-shimmer_9s_ease-in-out_infinite]" />
+      </div>
+
       <div className="absolute top-4 right-4 flex items-center space-x-4">
         <LanguageToggle />
         <ThemeToggle />
       </div>
 
-      <div className="w-full max-w-md">
+      <div className="relative z-10 w-full max-w-md">
         {/* Логотип и заголовок */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-4">
@@ -98,7 +129,7 @@ export default function LoginPage() {
               />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-h1 text-2xl font-semibold text-gray-900 dark:text-white mb-2 whitespace-pre-line">
             {t("login.title")}
           </h1>
           {/* <p className="text-gray-600 dark:text-gray-400">
@@ -107,7 +138,7 @@ export default function LoginPage() {
         </div>
 
         {/* Форма входа */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
+        <div className="glass-card rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
@@ -171,7 +202,7 @@ export default function LoginPage() {
                       setEmail(value);
                     }
                   }}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                   placeholder={t("login.emailPlaceholder")}
                   pattern="[a-zA-Z0-9._%+-]+@enbek\.kz"
                   title={t("login.emailTitle")}
@@ -211,7 +242,7 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  className="block w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                   placeholder={t("login.passwordPlaceholder")}
                   required
                 />
@@ -309,6 +340,137 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
+
+      <style jsx global>{`
+        .login-bg-base {
+          background: linear-gradient(
+            145deg,
+            #f0f7ff 0%,
+            #e8f2fc 35%,
+            #eef4fb 70%,
+            #e2ebf7 100%
+          );
+          background-size: 200% 200%;
+          animation: login-gradient-pan 18s ease-in-out infinite;
+        }
+        :global(.dark) .login-bg-base {
+          background: linear-gradient(
+            145deg,
+            #020617 0%,
+            #0c1525 40%,
+            #111d32 70%,
+            #0f172a 100%
+          );
+          background-size: 200% 200%;
+        }
+
+        @keyframes login-gradient-pan {
+          0%,
+          100% {
+            background-position: 0% 40%;
+          }
+          50% {
+            background-position: 100% 60%;
+          }
+        }
+
+        @keyframes login-orb-a {
+          0%,
+          100% {
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+          33% {
+            transform: translate3d(6%, 4%, 0) scale(1.08);
+          }
+          66% {
+            transform: translate3d(3%, -5%, 0) scale(0.96);
+          }
+        }
+        @keyframes login-orb-b {
+          0%,
+          100% {
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+          40% {
+            transform: translate3d(-5%, -6%, 0) scale(1.1);
+          }
+          80% {
+            transform: translate3d(-8%, 4%, 0) scale(0.94);
+          }
+        }
+        @keyframes login-orb-c {
+          0%,
+          100% {
+            transform: translate3d(-50%, -50%, 0) scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: translate3d(-50%, -50%, 0) scale(1.12);
+            opacity: 0.85;
+          }
+        }
+
+        .login-orb-a {
+          animation: login-orb-a 16s ease-in-out infinite;
+        }
+        .login-orb-b {
+          animation: login-orb-b 19s ease-in-out infinite;
+        }
+        .login-orb-c {
+          animation: login-orb-c 14s ease-in-out infinite;
+        }
+
+        @keyframes login-conic {
+          from {
+            transform: translate3d(-50%, -50%, 0) rotate(0deg);
+          }
+          to {
+            transform: translate3d(-50%, -50%, 0) rotate(360deg);
+          }
+        }
+
+        @keyframes login-grid-drift {
+          0% {
+            background-position: 0 0;
+          }
+          100% {
+            background-position: 48px 48px;
+          }
+        }
+
+        @keyframes login-shimmer {
+          0% {
+            transform: translate3d(-30%, 0, 0) rotate(15deg);
+            opacity: 0.35;
+          }
+          50% {
+            transform: translate3d(120%, 0, 0) rotate(15deg);
+            opacity: 0.65;
+          }
+          100% {
+            transform: translate3d(260%, 0, 0) rotate(15deg);
+            opacity: 0.35;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .login-bg-motion *,
+          .login-bg-motion {
+            animation: none !important;
+          }
+          .login-bg-base {
+            background-size: 100% 100% !important;
+          }
+          .login-orb-a,
+          .login-orb-b,
+          .login-orb-c {
+            transform: translate3d(0, 0, 0) !important;
+          }
+          .login-orb-c {
+            transform: translate3d(-50%, -50%, 0) scale(1) !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

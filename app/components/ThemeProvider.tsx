@@ -29,18 +29,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const root = document.documentElement;
     const hasDarkClass = root.classList.contains('dark');
     
-    // Проверяем сохраненную тему или системные настройки
     const savedTheme = localStorage.getItem('theme') as Theme | null;
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
-    // Определяем начальную тему: сначала проверяем сохраненную, потом класс в DOM, потом системные настройки
     let initialTheme: Theme;
     if (savedTheme) {
       initialTheme = savedTheme;
-    } else if (hasDarkClass) {
-      initialTheme = 'dark';
     } else {
-      initialTheme = prefersDark ? 'dark' : 'light';
+      initialTheme = 'light';
     }
     
     setTheme(initialTheme);

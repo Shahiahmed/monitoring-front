@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import ThemeToggle from "./ThemeToggle";
 import LanguageToggle from "./LanguageToggle";
 import Link from "next/link";
-import { apiUrl } from "@/app/lib/api";
+import { apiFetch } from "@/app/lib/api";
 
 interface CertSummary {
   type: string;
@@ -24,7 +24,7 @@ export default function Header() {
   const [ecpSummary, setEcpSummary] = useState<CertSummary | null>(null);
 
   function loadCertificates() {
-    fetch(apiUrl("settings/certificates"))
+    apiFetch("settings/certificates")
       .then((res) => (res.ok ? res.json() : []))
       .then((list: { type: string; validTo: string | null }[]) => {
         if (!Array.isArray(list)) return;
@@ -46,10 +46,10 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 fixed top-0 left-0 right-0 z-50 h-16">
+    <header className="glass fixed top-0 left-0 right-0 z-50 h-16 border-b border-white/40 dark:border-white/10">
       <div className="w-full px-4 h-full flex items-center">
         <div className="flex items-center justify-between w-full">
-          <div className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-2 hover:opacity-90 transition-opacity">
             <svg
               width={43}
               height={43}
@@ -104,11 +104,15 @@ export default function Header() {
                 strokeLinejoin="round"
               />
             </svg>
-
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white font-[family-name:var(--font-geist-sans)]">
-              Monitoring
-            </h1>
-          </div>
+            <div className="leading-tight">
+              <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white font-[family-name:var(--font-geist-sans)]">
+                SARAP
+              </h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                система мониторинга и аналитики
+              </p>
+            </div>
+          </Link>
 
           <div className="flex items-center space-x-6">
             {(sslSummary !== null || ecpSummary !== null) && (
@@ -161,7 +165,7 @@ export default function Header() {
               <ThemeToggle />
               <Link
                 href="/profile"
-                className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-slate-300 dark:border-gray-600 bg-slate-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 aria-label="Профиль"
               >
                 <svg

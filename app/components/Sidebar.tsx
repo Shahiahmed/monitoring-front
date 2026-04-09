@@ -7,6 +7,8 @@ import { useState, useEffect } from 'react';
 interface NavSubItem {
   name: string;
   href: string;
+  /** Только ADMIN / SUPER_ADMIN (например регистрация пользователей) */
+  adminOnly?: boolean;
 }
 
 interface NavItem {
@@ -27,13 +29,56 @@ const navigation: NavItem[] = [
     ),
   },
   {
+    name: 'Серверы',
+    href: '/servers',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+      </svg>
+    ),
+  },
+  {
     name: 'Инциденты',
-    href: '/incidents',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
       </svg>
     ),
+    children: [
+      { name: 'Журнал событий', href: '/incidents/events' },
+      { name: 'Добавить событие', href: '/incidents/add', adminOnly: true },
+      { name: 'Статистика', href: '/incidents/statistics' },
+      { name: 'Доступность ИС', href: '/incidents/availability' },
+    ],
+  },
+  {
+    name: 'Сервисы',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+    ),
+    children: [
+      { name: 'Список сервисов', href: '/services' },
+      { name: 'Реестр сервисов', href: '/services/registry' },
+      { name: 'Добавить сервис', href: '/services/add' },
+    ],
+  },
+  {
+    name: 'Справочники',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+      </svg>
+    ),
+    children: [
+      { name: 'Местоположения', href: '/references/locations' },
+      { name: 'Окружения', href: '/references/environments' },
+      { name: 'Гос органы', href: '/references/government-bodies' },
+      { name: 'ИС', href: '/references/information-systems' },
+      { name: 'Типы взаимодействия', href: '/references/interaction-types' },
+      { name: 'Типы приложения', href: '/references/application-types' },
+    ],
   },
   {
     name: 'Пользователи',
@@ -50,26 +95,12 @@ const navigation: NavItem[] = [
       {
         name: 'Регистрация',
         href: '/users/register',
+        adminOnly: true,
       },
       {
         name: 'Роли',
         href: '/users/roles',
       },
-    ],
-  },
-  {
-    name: 'Справочники',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-      </svg>
-    ),
-    children: [
-      { name: 'Местоположения', href: '/references/locations' },
-      { name: 'Гос органы', href: '/references/government-bodies' },
-      { name: 'ИС', href: '/references/information-systems' },
-      { name: 'Типы взаимодействия', href: '/references/interaction-types' },
-      { name: 'Типы приложения', href: '/references/application-types' },
     ],
   },
   {
@@ -95,39 +126,77 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [userIsAdminOrSuper, setUserIsAdminOrSuper] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("authUser");
+      if (!raw) {
+        setUserIsAdminOrSuper(false);
+        return;
+      }
+      const u = JSON.parse(raw) as { roles?: string[] };
+      const r = u.roles ?? [];
+      setUserIsAdminOrSuper(
+        r.includes("ADMIN") || r.includes("SUPER_ADMIN"),
+      );
+    } catch {
+      setUserIsAdminOrSuper(false);
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    // Фиксируем высоту сайдбара по viewport (решает баг при первом входе после логина)
+    const setHeight = () => {
+      const h = Math.max(0, (typeof window !== 'undefined' ? window.innerHeight : 0) - 64);
+      document.documentElement.style.setProperty('--sidebar-height', h + 'px');
+    };
+    setHeight();
+    // Повторно после первого кадра — viewport может быть не готов при редиректе
+    const raf = requestAnimationFrame(() => {
+      setHeight();
+    });
+    window.addEventListener('resize', setHeight);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', setHeight);
+    };
+  }, []);
 
   useEffect(() => {
     // Загружаем состояние из localStorage после монтирования
     const savedState = localStorage.getItem('sidebarCollapsed');
     const isCollapsed = savedState === 'true';
     setCollapsed(isCollapsed);
-    // Убеждаемся, что CSS переменная установлена правильно
     document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '4rem' : '16rem');
-    
-    // Автоматически раскрываем пункты меню, если текущий путь находится в их подменю
-    const expanded = new Set<string>();
-    navigation.forEach((item) => {
-      if (item.children) {
-        const isActive = item.children.some((child) => pathname === child.href);
-        if (isActive) {
-          expanded.add(item.name);
+
+    // При свёрнутом меню — все вкладки скрыты; при развёрнутом — раскрываем только родителя текущей страницы
+    if (isCollapsed) {
+      setExpandedItems(new Set());
+    } else {
+      const path = (pathname || '').replace(/\/+$/, '') || '/';
+      let expandedParent: string | null = null;
+      for (const item of navigation) {
+        if (item.children?.some((child) => path === ((child.href || '').replace(/\/+$/, '') || '/'))) {
+          expandedParent = item.name;
+          break;
         }
       }
-    });
-    setExpandedItems(expanded);
-    
+      setExpandedItems(expandedParent ? new Set([expandedParent]) : new Set());
+    }
+
     setMounted(true);
   }, [pathname]);
 
-  // Вычисляем, какие пункты должны быть раскрыты по текущему пути
-  const getExpandedItemsForPath = () => {
-    const expanded = new Set<string>();
-    navigation.forEach((item) => {
-      if (item.children && item.children.some((child) => pathname === child.href)) {
-        expanded.add(item.name);
+  // Возвращает только один раскрытый пункт — родитель текущей страницы
+  const getExpandedItemsForPath = (): Set<string> => {
+    const path = (pathname || '').replace(/\/+$/, '') || '/';
+    for (const item of navigation) {
+      if (item.children?.some((child) => path === ((child.href || '').replace(/\/+$/, '') || '/'))) {
+        return new Set([item.name]);
       }
-    });
-    return expanded;
+    }
+    return new Set();
   };
 
   const toggleSidebar = () => {
@@ -135,7 +204,6 @@ export default function Sidebar() {
     setCollapsed(newState);
     localStorage.setItem('sidebarCollapsed', String(newState));
     document.documentElement.style.setProperty('--sidebar-width', newState ? '4rem' : '16rem');
-    // При сворачивании — закрываем все подменю; при разворачивании — раскрываем только по текущему пути
     if (newState) {
       setExpandedItems(new Set());
     } else {
@@ -143,15 +211,13 @@ export default function Sidebar() {
     }
   };
 
+  /** Аккордеон: открыта не больше одной группы; повторный клик по открытой — закрывает. */
   const toggleExpanded = (itemName: string) => {
     setExpandedItems((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(itemName)) {
-        newSet.delete(itemName);
-      } else {
-        newSet.add(itemName);
+      if (prev.has(itemName)) {
+        return new Set();
       }
-      return newSet;
+      return new Set([itemName]);
     });
   };
 
@@ -159,20 +225,23 @@ export default function Sidebar() {
   // Размер устанавливается скриптом в head до первого рендера
   const displayCollapsed = mounted ? collapsed : false;
   
+  // Нормализуем путь для сравнения (trailingSlash: true даёт /users/, href — /users)
+  const normalizePath = (p: string) => (p || '').replace(/\/+$/, '') || '/';
+
   // Проверяем, активен ли пункт меню или его подпункты
   const isItemActive = (item: NavItem) => {
-    if (item.href && pathname === item.href) return true;
+    const path = normalizePath(pathname);
+    if (item.href && path === normalizePath(item.href)) return true;
     if (item.children) {
-      return item.children.some((child) => pathname === child.href);
+      return item.children.some((child) => path === normalizePath(child.href));
     }
     return false;
   };
 
   const handleLogout = () => {
     try {
-      // Здесь можно очистить токены/сессию, если они будут добавлены
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('authUser');
     } catch (e) {
       // игнорируем ошибки localStorage
     }
@@ -188,12 +257,16 @@ export default function Sidebar() {
     <>
       <aside
         suppressHydrationWarning
-        style={{ width: 'var(--sidebar-width, 16rem)' }}
-        className="sidebar-scroll bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 h-[calc(100vh-4rem)] fixed left-0 top-16 overflow-y-auto overflow-x-hidden z-40 transition-[width] duration-300 ease-in-out flex flex-col group/sidebar"
+        style={{
+          width: 'var(--sidebar-width, 16rem)',
+          height: 'var(--sidebar-height, calc(100vh - 4rem))',
+          top: '4rem',
+        }}
+        className="glass fixed left-0 overflow-hidden z-40 transition-[width] duration-300 ease-in-out flex flex-col group/sidebar border-r border-white/40 dark:border-white/10"
       >
-        <div className="flex flex-col flex-1 min-w-0 py-4">
-        {/* Пункты меню — каждая строка: иконка и текст в одном ряду */}
-        <nav className="flex-1 space-y-1">
+        {/* Прокручиваемая область меню */}
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-4 sidebar-scroll">
+        <nav className="space-y-1">
           {navigation.map((item) => {
             const isActive = isItemActive(item);
             const hasChildren = item.children && item.children.length > 0;
@@ -212,13 +285,13 @@ export default function Sidebar() {
                             setCollapsed(false);
                             document.documentElement.style.setProperty('--sidebar-width', '16rem');
                             localStorage.setItem('sidebarCollapsed', 'false');
-                            setExpandedItems((prev) => new Set(prev).add(item.name));
+                            setExpandedItems(new Set([item.name]));
                           } else {
                             toggleExpanded(item.name);
                           }
                         }}
                         className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
-                          isActive ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                          isActive ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'text-slate-700 dark:text-gray-300 hover:bg-slate-300 dark:hover:bg-gray-800'
                         }`}
                       >
                         {item.icon}
@@ -227,7 +300,7 @@ export default function Sidebar() {
                       <Link
                         href={item.href!}
                         className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
-                          isActive ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                          isActive ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'text-slate-700 dark:text-gray-300 hover:bg-slate-300 dark:hover:bg-gray-800'
                         }`}
                       >
                         {item.icon}
@@ -240,7 +313,7 @@ export default function Sidebar() {
                       <button
                         onClick={() => toggleExpanded(item.name)}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors ${
-                          isActive ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                          isActive ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium' : 'text-slate-700 dark:text-gray-300 hover:bg-slate-300 dark:hover:bg-gray-800'
                         }`}
                       >
                         <span className="text-sm whitespace-nowrap truncate">{item.name}</span>
@@ -252,7 +325,7 @@ export default function Sidebar() {
                       <Link
                         href={item.href!}
                         className={`w-full flex items-center px-3 py-2 rounded-lg transition-colors ${
-                          isActive ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                          isActive ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium' : 'text-slate-700 dark:text-gray-300 hover:bg-slate-300 dark:hover:bg-gray-800'
                         }`}
                       >
                         <span className="text-sm whitespace-nowrap truncate">{item.name}</span>
@@ -267,14 +340,17 @@ export default function Sidebar() {
                       <div className="w-16 flex-shrink-0" />
                       <div className="overflow-hidden flex-1 min-w-0 pl-0" style={textColumnStyle}>
                         <div className="pt-1 space-y-1">
-                          {item.children!.map((child) => {
-                            const isChildActive = pathname === child.href;
+                          {item.children!.filter(
+                            (child) =>
+                              !child.adminOnly || userIsAdminOrSuper,
+                          ).map((child) => {
+                            const isChildActive = normalizePath(pathname) === normalizePath(child.href);
                             return (
                               <Link
                                 key={child.href}
                                 href={child.href}
                                 className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
-                                  isChildActive ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                                  isChildActive ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium' : 'text-slate-600 dark:text-gray-400 hover:bg-slate-300 dark:hover:bg-gray-800'
                                 }`}
                               >
                                 <span className="whitespace-nowrap truncate block">{child.name}</span>
@@ -296,10 +372,10 @@ export default function Sidebar() {
             );
           })}
         </nav>
+        </div>
 
-        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800" />
-
-        {/* Строка Выйти — иконка и текст в одном ряду */}
+        {/* Выйти — всегда внизу сайдбара (не прокручивается) */}
+        <div className="flex-shrink-0 py-4 border-t border-slate-300 dark:border-gray-800">
         <div className="flex items-center min-h-12 px-1">
           <div className="w-16 flex-shrink-0 flex justify-center">
             <button
@@ -322,14 +398,14 @@ export default function Sidebar() {
             </button>
           </div>
         </div>
-      </div>
+        </div>
       </aside>
 
       {/* Плавающая таблетка на границе сайдбар / контент */}
       <button
         onClick={toggleSidebar}
         style={{ left: 'calc(var(--sidebar-width) - 14px)', top: 'calc(2rem + 50vh)' }}
-        className="fixed -translate-y-1/2 w-7 h-14 rounded-full flex items-center justify-center bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 shadow-md z-50 transition-[left,transform] duration-300 ease-in-out hover:scale-105"
+        className="fixed -translate-y-1/2 w-7 h-14 rounded-full flex items-center justify-center glass border border-white/50 dark:border-white/20 hover:scale-105 z-[60] transition-all duration-300"
         aria-label={displayCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
         title={displayCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
       >

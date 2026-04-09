@@ -25,13 +25,13 @@ export default function ActivityPage() {
   const entries: { id: number; time: string; user: string; action: string; details?: string }[] = [];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
       <div className="max-w-5xl px-6 py-10">
         <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white mb-6">
           Журнал действий
         </h1>
 
-        <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
+        <section className="rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
           <div className="px-6 sm:px-8 py-4 border-b border-slate-200 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-4">
             <h2 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
               <span className="w-2 h-4 rounded-full bg-slate-500" />

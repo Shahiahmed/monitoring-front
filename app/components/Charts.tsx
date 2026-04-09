@@ -11,7 +11,6 @@ export function LineChart() {
 
   useEffect(() => {
     if (!chartRef.current) return;
-
     // Инициализируем график
     if (!chartInstance.current) {
       chartInstance.current = echarts.init(chartRef.current);
@@ -19,6 +18,10 @@ export function LineChart() {
 
     const option: echarts.EChartsOption = {
       backgroundColor: 'transparent',
+      animation: true,
+      animationDuration: 1200,
+      animationEasing: 'cubicOut',
+      animationDurationUpdate: 800,
       title: {
         text: 'Мониторинг производительности',
         left: 'center',
@@ -124,6 +127,7 @@ export function LineChart() {
               borderWidth: 3,
             },
           },
+          animationDelay: (idx: number) => idx * 100,
         },
         {
           name: 'Память',
@@ -160,6 +164,7 @@ export function LineChart() {
               borderWidth: 3,
             },
           },
+          animationDelay: (idx: number) => idx * 100,
         },
         {
           name: 'Сеть',
@@ -196,20 +201,29 @@ export function LineChart() {
               borderWidth: 3,
             },
           },
+          animationDelay: (idx: number) => idx * 100,
         },
       ],
     };
 
     chartInstance.current.setOption(option);
 
-    // Обработка изменения размера окна
+    // Обработка изменения размера окна и контейнера
     const handleResize = () => {
       chartInstance.current?.resize();
     };
     window.addEventListener('resize', handleResize);
 
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    if (chartRef.current) {
+      resizeObserver.observe(chartRef.current);
+    }
+
     return () => {
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
     };
   }, [theme]);
 
@@ -230,6 +244,10 @@ export function BarChart() {
 
     const option: echarts.EChartsOption = {
       backgroundColor: 'transparent',
+      animation: true,
+      animationDuration: 1000,
+      animationEasing: 'cubicOut',
+      animationDurationUpdate: 700,
       title: {
         text: 'Статистика инцидентов',
         left: 'center',
@@ -384,8 +402,16 @@ export function BarChart() {
     };
     window.addEventListener('resize', handleResize);
 
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    if (chartRef.current) {
+      resizeObserver.observe(chartRef.current);
+    }
+
     return () => {
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
     };
   }, [theme]);
 

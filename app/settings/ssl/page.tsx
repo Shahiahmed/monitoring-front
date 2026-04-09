@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { apiUrl } from "@/app/lib/api";
+import { apiFetch } from "@/app/lib/api";
 
 const SSL_EXT = [".p12", ".pfx", ".cer", ".crt", ".pem"];
 const ECP_EXT = [".p12", ".pfx", ".key", ".cer", ".crt", ".pem"];
@@ -122,7 +122,7 @@ export default function SslPage() {
 
   async function handleDelete(id: number) {
     try {
-      const res = await fetch(apiUrl(`settings/certificates/${id}`), { method: "DELETE" });
+      const res = await apiFetch(`settings/certificates/${id}`, { method: "DELETE" });
       if (res.ok) {
         setCertificates((prev) => prev.filter((c) => c.id !== id));
         setSuccess("Сертификат удалён.");
@@ -139,7 +139,7 @@ export default function SslPage() {
   async function loadCertificates() {
     setLoadingList(true);
     try {
-      const res = await fetch(apiUrl("settings/certificates"));
+      const res = await apiFetch("settings/certificates");
       if (res.ok) {
         const data = await res.json();
         setCertificates(Array.isArray(data) ? data : []);
@@ -192,7 +192,7 @@ export default function SslPage() {
       const formData = new FormData();
       formData.append("file", sslFile!);
       formData.append("password", sslPassword);
-      const res = await fetch(apiUrl("settings/certificates/ssl"), {
+      const res = await apiFetch("settings/certificates/ssl", {
         method: "POST",
         body: formData,
       });
@@ -221,7 +221,7 @@ export default function SslPage() {
     try {
       const formData = new FormData();
       formData.append("file", ecpFile!);
-      const res = await fetch(apiUrl("settings/certificates/ecp"), {
+      const res = await apiFetch("settings/certificates/ecp", {
         method: "POST",
         body: formData,
       });
@@ -327,7 +327,7 @@ export default function SslPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-900">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
       <div className="max-w-4xl px-6 py-10">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">
@@ -420,7 +420,7 @@ export default function SslPage() {
                     </div>
                     <div className="flex items-center justify-end gap-3">
                       <button type="button" onClick={clearSsl} className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Сбросить</button>
-                      <button type="submit" disabled={!canSubmitSsl} className="px-6 py-2.5 text-sm font-medium text-white bg-gray-900 dark:bg-white text-gray-100 dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                      <button type="submit" disabled={!canSubmitSsl} className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                         {isLoading ? <><svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg> Сохранение...</> : "Сохранить SSL"}
                       </button>
                     </div>
@@ -453,7 +453,7 @@ export default function SslPage() {
                     </div>
                     <div className="flex items-center justify-end gap-3">
                       <button type="button" onClick={clearEcp} className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Сбросить</button>
-                      <button type="submit" disabled={!canSubmitEcp} className="px-6 py-2.5 text-sm font-medium text-white bg-gray-900 dark:bg-white text-gray-100 dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                      <button type="submit" disabled={!canSubmitEcp} className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                         {isLoading ? <><svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg> Сохранение...</> : "Сохранить ЭЦП"}
                       </button>
                     </div>
