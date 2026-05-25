@@ -19,7 +19,7 @@ function daysLeft(validTo: string | null): number | null {
   return Math.ceil((to - now) / (24 * 60 * 60 * 1000));
 }
 
-export default function Header() {
+export default function Header({ className = "" }: { className?: string }) {
   const [sslSummary, setSslSummary] = useState<CertSummary | null>(null);
   const [ecpSummary, setEcpSummary] = useState<CertSummary | null>(null);
 
@@ -46,7 +46,7 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="glass fixed top-0 left-0 right-0 z-50 h-16 border-b border-white/40 dark:border-white/10">
+    <header className={`glass fixed top-0 left-0 right-0 z-50 h-16 border-b border-white/40 dark:border-white/10 ${className}`}>
       <div className="w-full px-4 h-full flex items-center">
         <div className="flex items-center justify-between w-full">
           <Link href="/" className="flex items-center space-x-2 hover:opacity-90 transition-opacity">

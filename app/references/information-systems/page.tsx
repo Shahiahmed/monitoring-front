@@ -15,6 +15,8 @@ interface InfoSystem {
   nameRu: string | null;
   goId: number;
   goNameRu: string | null;
+  sortOrder: number | null;
+  includeInAvailability: boolean;
 }
 
 interface AuthUser {
@@ -34,7 +36,7 @@ export default function InformationSystemsPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState({ id: "", nameRu: "", nameKz: "", nameEn: "", goId: "" });
+  const [form, setForm] = useState({ id: "", nameRu: "", nameKz: "", nameEn: "", goId: "", sortOrder: "0", includeInAvailability: true });
   const [saving, setSaving] = useState(false);
 
   const [search, setSearch] = useState("");
@@ -85,7 +87,7 @@ export default function InformationSystemsPage() {
   });
 
   const resetForm = () => {
-    setForm({ id: "", nameRu: "", nameKz: "", nameEn: "", goId: "" });
+    setForm({ id: "", nameRu: "", nameKz: "", nameEn: "", goId: "", sortOrder: "0", includeInAvailability: true });
     setEditingId(null);
     setShowForm(false);
   };
@@ -97,6 +99,8 @@ export default function InformationSystemsPage() {
       nameKz: item.nameKz ?? "",
       nameEn: item.nameEn ?? "",
       goId: String(item.goId),
+      sortOrder: String(item.sortOrder ?? 0),
+      includeInAvailability: item.includeInAvailability !== false,
     });
     setEditingId(item.id);
     setShowForm(true);
@@ -132,6 +136,8 @@ export default function InformationSystemsPage() {
       nameEn: form.nameEn || null,
       goId: Number(form.goId),
       goNameRu: null,
+      sortOrder: Number(form.sortOrder) || 0,
+      includeInAvailability: form.includeInAvailability,
     };
 
     try {
@@ -246,6 +252,28 @@ export default function InformationSystemsPage() {
                 className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500"
               />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Порядок сортировки</label>
+              <input
+                type="number"
+                min={0}
+                value={form.sortOrder}
+                onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
+                className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500"
+              />
+            </div>
+            <div className="flex items-center gap-3 pt-5">
+              <input
+                id="includeInAvailability"
+                type="checkbox"
+                checked={form.includeInAvailability}
+                onChange={(e) => setForm({ ...form, includeInAvailability: e.target.checked })}
+                className="h-4 w-4 accent-blue-600 cursor-pointer"
+              />
+              <label htmlFor="includeInAvailability" className="text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                Учитывать в % доступности
+              </label>
+            </div>
           </div>
           <div className="mt-4 flex items-center gap-3">
             <button
@@ -294,15 +322,17 @@ export default function InformationSystemsPage() {
             <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 <th className="w-14 px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">№</th>
-                <th className="w-[40%] px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Название</th>
+                <th className="w-16 px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Порядок</th>
+                <th className="w-[35%] px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Название</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Гос орган</th>
+                <th className="w-28 px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">% доступн.</th>
                 <th className="w-24 px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Действия</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                  <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
                     Записи не найдены
                   </td>
                 </tr>
@@ -310,8 +340,20 @@ export default function InformationSystemsPage() {
                 filtered.map((item, index) => (
                   <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                     <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">{index + 1}</td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">{item.sortOrder ?? 0}</td>
                     <td className="px-4 py-3 text-sm text-gray-900 dark:text-white break-words">{item.nameRu || "—"}</td>
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 break-words">{item.goNameRu || "—"}</td>
+                    <td className="px-4 py-3 text-center">
+                      {item.includeInAvailability !== false ? (
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30">
+                          <svg className="w-3 h-3 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800">
+                          <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12"/></svg>
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       {isAdminOrSuperAdmin(currentUser) && (
                         <div className="flex items-center justify-end gap-2">

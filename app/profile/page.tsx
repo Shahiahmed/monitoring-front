@@ -12,11 +12,13 @@ interface AuthUser {
   secondName: string | null;
   roles: string[];
   hasAvatar?: boolean;
+  passwordHint?: string | null;
 }
 
 export default function ProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarDeleting, setAvatarDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -27,40 +29,35 @@ export default function ProfilePage() {
     lastName: "",
     secondName: "",
     email: "",
+    passwordHint: "",
   });
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
   useEffect(() => {
-    try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem("authUser") : null;
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as AuthUser;
-      setUser(parsed);
-      setForm({
-        firstName: parsed.firstName ?? "",
-        lastName: parsed.lastName ?? "",
-        secondName: parsed.secondName ?? "",
-        email: parsed.email,
-      });
+    apiFetch("users/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((parsed: AuthUser | null) => {
+        if (!parsed) return;
+        setUser(parsed);
+        setForm({
+          firstName: parsed.firstName ?? "",
+          lastName: parsed.lastName ?? "",
+          secondName: parsed.secondName ?? "",
+          email: parsed.email,
+          passwordHint: parsed.passwordHint ?? "",
+        });
+        localStorage.setItem("authUser", JSON.stringify(parsed));
 
-      if (parsed.hasAvatar !== false) {
-        apiFetch(`users/${parsed.id}/avatar`)
-          .then((res) => {
-            if (res.ok) return res.blob();
-            return null;
-          })
-          .then((blob) => {
-            if (blob && blob.size > 0) {
-              setAvatarPreview(URL.createObjectURL(blob));
-            }
-          })
-          .catch(() => {});
-      }
-    } catch {
-      // ignore
-    }
+        if (parsed.hasAvatar) {
+          apiFetch(`users/${parsed.id}/avatar`)
+            .then((res) => (res.ok ? res.blob() : null))
+            .then((blob) => { if (blob && blob.size > 0) setAvatarPreview(URL.createObjectURL(blob)); })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,6 +109,22 @@ export default function ProfilePage() {
     } finally {
       setAvatarUploading(false);
     }
+  };
+
+  const handleAvatarDelete = async () => {
+    if (!user) return;
+    setAvatarDeleting(true);
+    try {
+      const res = await apiFetch(`users/${user.id}/avatar`, { method: "DELETE" });
+      if (!res.ok) { alert("Не удалось удалить фото"); return; }
+      setAvatarPreview(null);
+      setUser(prev => prev ? { ...prev, hasAvatar: false } : null);
+      try {
+        const raw = localStorage.getItem("authUser");
+        if (raw) { const u = JSON.parse(raw) as AuthUser; u.hasAvatar = false; localStorage.setItem("authUser", JSON.stringify(u)); }
+      } catch {}
+    } catch { alert("Ошибка при удалении фото"); }
+    finally { setAvatarDeleting(false); }
   };
 
   const handleChange = (
@@ -182,10 +195,13 @@ export default function ProfilePage() {
           firstName: form.firstName,
           lastName: form.lastName,
           secondName: form.secondName,
+          passwordHint: form.passwordHint || null,
           isActive: true,
           registrationDate: null,
           lastLoginDate: null,
-          roles: user.roles,
+          roles: Array.isArray(user.roles)
+            ? user.roles.map((r) => (typeof r === "string" ? r : (r as { code?: string }).code ?? r))
+            : [],
           hasAvatar: Boolean(user.hasAvatar),
         }),
       });
@@ -214,8 +230,8 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
-      <div className="px-6 py-8">
+    <div className="px-6 py-8">
+      <div>
         {/* Заголовок */}
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
@@ -243,20 +259,42 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div className="flex-1">
-                  <label
-                    htmlFor="avatar"
-                    className={`inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer ${avatarUploading ? "opacity-50 pointer-events-none" : ""}`}
-                  >
-                    <span>{avatarUploading ? "Загрузка..." : "Изменить"}</span>
-                    <input
-                      id="avatar"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAvatarChange}
-                      className="hidden"
-                      disabled={avatarUploading}
-                    />
-                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label
+                      htmlFor="avatar"
+                      className={`inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer ${avatarUploading || avatarDeleting ? "opacity-50 pointer-events-none" : ""}`}
+                    >
+                      <span>{avatarUploading ? "Загрузка..." : "Изменить"}</span>
+                      <input
+                        id="avatar"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarChange}
+                        className="hidden"
+                        disabled={avatarUploading || avatarDeleting}
+                      />
+                    </label>
+                    {avatarPreview && (
+                      <button
+                        type="button"
+                        onClick={handleAvatarDelete}
+                        disabled={avatarDeleting || avatarUploading}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 border border-red-200 dark:border-red-800 rounded-md text-sm font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {avatarDeleting ? (
+                          <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                          </svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                          </svg>
+                        )}
+                        {avatarDeleting ? "Удаление..." : "Удалить"}
+                      </button>
+                    )}
+                  </div>
                   <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                     JPG, PNG, до 5MB
                   </p>
@@ -393,6 +431,24 @@ export default function ProfilePage() {
                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                   Оставьте поля пустыми, если не хотите изменять пароль
                 </p>
+                <div className="mt-4">
+                  <label htmlFor="passwordHint" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Подсказка к паролю
+                  </label>
+                  <textarea
+                    id="passwordHint"
+                    name="passwordHint"
+                    value={form.passwordHint}
+                    onChange={(e) => setForm((prev) => ({ ...prev, passwordHint: e.target.value }))}
+                    rows={2}
+                    disabled={isSaving}
+                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 resize-none disabled:opacity-50"
+                    placeholder="Введите подсказку для восстановления пароля"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Отображается на странице «Забыли пароль?»
+                  </p>
+                </div>
               </section>
 
               {/* Кнопка сохранения */}

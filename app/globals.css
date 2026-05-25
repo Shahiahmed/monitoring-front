@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 @custom-variant dark (&&:where(.dark, .dark *));
 
@@ -279,21 +278,30 @@ html {
   background: #64748b;
 }
 
-/* Анимация открытия после логина: fade + blur */
-@keyframes app-reveal {
-  from {
-    opacity: 0;
-    filter: blur(8px);
-  }
-  to {
-    opacity: 1;
-    filter: blur(0);
-  }
+/* Анимация открытия после логина: stagger */
+@keyframes stagger-header {
+  from { opacity: 0; transform: translateY(-18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes stagger-sidebar {
+  from { opacity: 0; transform: translateX(-22px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes stagger-main {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.animate-app-reveal {
-  animation: app-reveal 0.5s ease-out forwards;
+.stagger-header  { animation: stagger-header  0.6s cubic-bezier(0.22,1,0.36,1) forwards; }
+.stagger-sidebar { animation: stagger-sidebar 0.65s cubic-bezier(0.22,1,0.36,1) 0.15s both; }
+.stagger-main    { animation: stagger-main    0.7s  cubic-bezier(0.22,1,0.36,1) 0.32s both; }
+
+/* legacy — оставляем для обратной совместимости */
+@keyframes app-reveal {
+  from { opacity: 0; filter: blur(8px); }
+  to   { opacity: 1; filter: blur(0); }
 }
+.animate-app-reveal { animation: app-reveal 0.5s ease-out forwards; }
 
 /* Предупреждение ОЗУ: мигание рамки */
 @keyframes warning-border-pulse {

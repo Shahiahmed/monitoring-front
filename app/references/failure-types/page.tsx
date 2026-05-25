@@ -3,30 +3,30 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 
-interface InteractionType {
+interface FailureType {
   id: number;
-  nameEn: string | null;
-  nameKz: string | null;
   nameRu: string | null;
+  nameKz: string | null;
+  nameEn: string | null;
 }
 
 function isAdminOrSuperAdmin(roles: string[]): boolean {
   return roles.includes("SUPER_ADMIN") || roles.includes("ADMIN");
 }
 
-export default function InteractionTypesPage() {
-  const [items, setItems] = useState<InteractionType[]>([]);
+export default function FailureTypesPage() {
+  const [items, setItems] = useState<FailureType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState({ id: "", nameRu: "", nameKz: "", nameEn: "" });
+  const [form, setForm] = useState({ nameRu: "", nameKz: "", nameEn: "" });
   const [saving, setSaving] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchItems = async () => {
     try {
-      const res = await apiFetch("interaction-types");
+      const res = await apiFetch("dic-failure-types");
       if (!res.ok) throw new Error("Не удалось загрузить данные");
       setItems(await res.json());
     } catch (e: unknown) {
@@ -48,21 +48,21 @@ export default function InteractionTypesPage() {
   }, []);
 
   const resetForm = () => {
-    setForm({ id: "", nameRu: "", nameKz: "", nameEn: "" });
+    setForm({ nameRu: "", nameKz: "", nameEn: "" });
     setEditingId(null);
     setShowForm(false);
   };
 
-  const handleEdit = (item: InteractionType) => {
-    setForm({ id: String(item.id), nameRu: item.nameRu ?? "", nameKz: item.nameKz ?? "", nameEn: item.nameEn ?? "" });
+  const handleEdit = (item: FailureType) => {
+    setForm({ nameRu: item.nameRu ?? "", nameKz: item.nameKz ?? "", nameEn: item.nameEn ?? "" });
     setEditingId(item.id);
     setShowForm(true);
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Удалить тип взаимодействия?")) return;
+    if (!confirm("Удалить тип инцидента?")) return;
     try {
-      const res = await apiFetch(`interaction-types/${id}`, { method: "DELETE" });
+      const res = await apiFetch(`dic-failure-types/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       setItems(prev => prev.filter(i => i.id !== id));
     } catch { alert("Ошибка при удалении"); }
@@ -72,13 +72,12 @@ export default function InteractionTypesPage() {
     e.preventDefault();
     setSaving(true);
     const body = {
-      id: editingId ?? Number(form.id),
       nameRu: form.nameRu || null,
       nameKz: form.nameKz || null,
       nameEn: form.nameEn || null,
     };
     try {
-      const res = await apiFetch(editingId ? `interaction-types/${editingId}` : "interaction-types", {
+      const res = await apiFetch(editingId ? `dic-failure-types/${editingId}` : "dic-failure-types", {
         method: editingId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -97,8 +96,8 @@ export default function InteractionTypesPage() {
     <div className="px-6 py-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">Типы взаимодействия</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Справочник типов взаимодействия</p>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">Типы инцидентов</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Справочник типов инцидентов</p>
         </div>
         {isAdmin && !showForm && (
           <button onClick={() => { resetForm(); setShowForm(true); }}
@@ -112,19 +111,12 @@ export default function InteractionTypesPage() {
         <form onSubmit={handleSubmit}
           className="mb-6 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 p-5">
           <h2 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
-            {editingId ? "Редактирование" : "Новый тип взаимодействия"}
+            {editingId ? "Редактирование" : "Новый тип инцидента"}
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {!editingId && (
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">ID</label>
-                <input type="number" required value={form.id}
-                  onChange={e => setForm({ ...form, id: e.target.value })} className={inputCls} />
-              </div>
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Русский</label>
-              <input type="text" value={form.nameRu}
+              <input type="text" required value={form.nameRu}
                 onChange={e => setForm({ ...form, nameRu: e.target.value })} className={inputCls} />
             </div>
             <div>
@@ -175,7 +167,7 @@ export default function InteractionTypesPage() {
               {items.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-                    Типы взаимодействия не найдены
+                    Типы инцидентов не найдены
                   </td>
                 </tr>
               ) : items.map((item, index) => (

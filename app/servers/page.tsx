@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import * as echarts from "echarts";
 import { useTheme } from "../components/ThemeProvider";
 import { apiFetch } from "../lib/api";
@@ -51,7 +52,7 @@ function BarChartServers({
   title: string;
   subtitle?: string;
   servers: Server[];
-  usedData: number[]; // проценты использования (0-100)
+  usedData: number[];
   theme: string;
 }) {
   const chartRef = useRef<HTMLDivElement>(null);
@@ -114,7 +115,6 @@ function BarChartServers({
         formatter: (params: any) => {
           const pUsed = params.find((p: any) => p.seriesName === "Занято");
           const pFree = params.find((p: any) => p.seriesName === "Свободно");
-          const total = 100;
           const usedVal = pUsed ? pUsed.value : 0;
           const freeVal = pFree ? pFree.value : 0;
           const idx = params[0].dataIndex;
@@ -123,7 +123,7 @@ function BarChartServers({
             `<div style="margin-bottom:4px;"><b>${fullIp}</b></div>`,
             `Занято: <b>${usedVal}%</b>`,
             `Свободно: <b>${freeVal}%</b>`,
-            `<span style="color:${t.subText}">Всего: ${total}%</span>`,
+            `<span style="color:${t.subText}">Всего: 100%</span>`,
           ].join("<br/>");
         },
       },
@@ -219,7 +219,7 @@ function BarChartServers({
     t.tooltipBorder,
   ]);
 
-  return <div ref={chartRef} className="w-full h-[280px]" />;
+  return <div ref={chartRef} className="w-full h-70" />;
 }
 
 type ChartDataMode = "percent" | "data";
@@ -293,7 +293,7 @@ function ResourcesChart({
       const idx = params[0].dataIndex;
       const name = fullIps[idx] ?? params[0].axisValueLabel;
       const lines = [`<div style="margin-bottom:4px;"><b>${name}</b></div>`];
-      params.forEach((p: any, i: number) => {
+      params.forEach((p: any) => {
         const metric = p.seriesName;
         const val = p.value ?? 0;
         if (metric === "CPU") {
@@ -515,14 +515,8 @@ function ResourcesChart({
     t.subText,
   ]);
 
-  return <div ref={chartRef} className="w-full h-[320px]" />;
+  return <div ref={chartRef} className="w-full h-80" />;
 }
-
-const GAUGE_COLORS: Record<string, string> = {
-  CPU: "#3b82f6",
-  ОЗУ: "#22c55e",
-  Диск: "#f97316",
-};
 
 function ServerGauge({
   value,
@@ -535,8 +529,9 @@ function ServerGauge({
   memAvailableMb,
   diskUsedGb,
   diskTotalGb,
+  height = 190,
 }: {
-  value: number; // % использования
+  value: number;
   label: string;
   theme: string;
   serverIp: string;
@@ -546,6 +541,7 @@ function ServerGauge({
   memAvailableMb?: number | null;
   diskUsedGb?: number | null;
   diskTotalGb?: number | null;
+  height?: number;
 }) {
   const chartRef = useRef<HTMLDivElement>(null);
   const instanceRef = useRef<echarts.ECharts | null>(null);
@@ -558,7 +554,6 @@ function ServerGauge({
     }
 
     const pct = Math.max(0, Math.min(100, Math.round(value ?? 0)));
-    // Для ОЗУ: сегменты по used/available (как в тексте), иначе used/(total-used)
     const usedPct =
       label === "ОЗУ" &&
       memUsedMb != null &&
@@ -602,7 +597,6 @@ function ServerGauge({
       series: [
         {
           type: "pie",
-          // Donut (как на скрине): кольцо с текстом в центре
           radius: ["64%", "92%"],
           center: ["50%", "50%"],
           startAngle: 90,
@@ -649,7 +643,6 @@ function ServerGauge({
             Math.min(100, Math.round(Number(p?.value ?? 0))),
           );
 
-          // По сегменту: красный => занято, зелёный => свободно
           const mainLine = isUsed
             ? `Занято: <b style="color:${usedColor}">${pctVal}%</b>`
             : `Свободно: <b style="color:${freeColor}">${pctVal}%</b>`;
@@ -682,7 +675,6 @@ function ServerGauge({
               ? `<div style="margin-top:4px;color:${subColor};font-size:12px">${details.join("<br/>")}</div>`
               : "";
 
-          // Только проценты + МБ, без информации о сервере и без названия метрики
           return [mainLine, detailBlock].filter(Boolean).join("<br/>");
         },
         backgroundColor: isDark
@@ -717,11 +709,14 @@ function ServerGauge({
     diskTotalGb,
   ]);
 
-  return <div ref={chartRef} className="w-full h-[190px]" />;
+  return <div ref={chartRef} style={{ width: "100%", height: `${height}px` }} />;
 }
+
+// ─── Главная страница ────────────────────────────────────────────────────────
 
 export default function ServersPage() {
   const { theme } = useTheme();
+  const router = useRouter();
   const [servers, setServers] = useState<Server[]>([]);
   const [metricsMap, setMetricsMap] = useState<Record<number, ServerMetrics>>(
     {},
@@ -730,6 +725,17 @@ export default function ServersPage() {
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chartDataMode, setChartDataMode] = useState<ChartDataMode>("percent");
+  const [cooldown, setCooldown] = useState(0);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const isDark = theme === "dark";
+
+  const isSuperAdmin = (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("authUser") ?? "{}");
+      return u?.roles?.some((r: any) => (r.code ?? r) === "SUPER_ADMIN") ?? false;
+    } catch { return false; }
+  })();
 
   useEffect(() => {
     const fetchServers = async () => {
@@ -749,6 +755,7 @@ export default function ServersPage() {
 
   const fetchMetrics = async (refresh?: boolean) => {
     setMetricsLoading(true);
+    if (refresh) setCooldown(30);
     try {
       const path = refresh ? "servers/metrics?refresh=true" : "servers/metrics";
       const res = await apiFetch(path);
@@ -763,6 +770,24 @@ export default function ServersPage() {
       // ignore
     } finally {
       setMetricsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  const handleClearHistory = async () => {
+    setClearing(true);
+    try {
+      await apiFetch("servers/history/all", { method: "DELETE" });
+    } catch {
+      // ignore
+    } finally {
+      setClearing(false);
+      setShowClearModal(false);
     }
   };
 
@@ -824,41 +849,38 @@ export default function ServersPage() {
             Боевые серверы из реестра (метрики по SSH)
           </p>
         </div>
-        <button
-          onClick={() => fetchMetrics(true)}
-          disabled={metricsLoading || prodServers.length === 0}
-          className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded border transition-colors disabled:opacity-50 ${
-            metricsLoading
-              ? "border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 animate-pulse"
-              : "border-slate-300 dark:border-gray-700 bg-slate-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-slate-300 dark:hover:bg-gray-600"
-          }`}
-          title={metricsLoading ? "Обновление метрик..." : "Обновить метрики"}
-        >
-          {metricsLoading && (
-            <svg
-              className="h-4 w-4 animate-spin"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
+        <div className="flex items-center gap-2">
+          {isSuperAdmin && (
+            <button
+              onClick={() => setShowClearModal(true)}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded border transition-colors border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40"
             >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"
-              />
-            </svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+              </svg>
+              Очистить историю
+            </button>
           )}
-          <span>{metricsLoading ? "Обновление..." : "Обновить метрики"}</span>
-        </button>
+          <button
+            onClick={() => fetchMetrics(true)}
+            disabled={metricsLoading || cooldown > 0 || prodServers.length === 0}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded border transition-colors disabled:opacity-50 ${
+              metricsLoading
+                ? "border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 animate-pulse"
+                : "border-slate-300 dark:border-gray-700 bg-slate-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-slate-300 dark:hover:bg-gray-600"
+            }`}
+          >
+            {metricsLoading && (
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z" />
+              </svg>
+            )}
+            <span>
+              {metricsLoading ? "Обновление..." : cooldown > 0 ? `Подождите ${cooldown} сек` : "Обновить метрики"}
+            </span>
+          </button>
+        </div>
       </div>
 
       {loading && (
@@ -919,9 +941,11 @@ export default function ServersPage() {
               return (
                 <div
                   key={s.id}
-                  className={`glass-card rounded-xl p-4 transition-shadow duration-200 hover:shadow-card-hover ${
-                    lowRam ? "!border-2 !border-red-500 dark:!border-red-500 animate-warning-card" : ""
+                  onClick={() => router.push(`/servers/detail?id=${s.id}`)}
+                  className={`glass-card rounded-xl p-4 transition-all duration-200 hover:shadow-card-hover cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
+                    lowRam ? "border-2! border-red-500! dark:border-red-500! animate-warning-card" : ""
                   }`}
+                  title="Нажмите для подробной информации"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2 min-w-0">
@@ -935,17 +959,29 @@ export default function ServersPage() {
                         CPU {cpuData[index]}%
                       </span>
                     </div>
-                    <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
-                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                      Активен
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        Активен
+                      </span>
+                      <svg
+                        className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </div>
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                     {s.description ?? "Боевой сервер"}
                     {s.envNameRu ? ` • ${s.envNameRu}` : ""}
                   </div>
 
-                  {/* Круги (pie charts) только для ОЗУ и Диска */}
                   <div className="mt-3 grid grid-cols-2 gap-3">
                     <div className="flex flex-col items-center">
                       <ServerGauge
@@ -1049,6 +1085,96 @@ export default function ServersPage() {
           Боевые серверы не найдены.
         </p>
       )}
+
+      {/* Модальное подтверждение очистки истории */}
+      {showClearModal && (
+        <div className="srv-modal-overlay" onClick={() => setShowClearModal(false)}>
+          <div className="srv-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="srv-modal-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round">
+                <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+              </svg>
+            </div>
+            <h3 className="srv-modal-title">Очистить всю историю?</h3>
+            <p className="srv-modal-text">
+              Будут удалены все записи метрик по всем серверам.<br />
+              Данные за следующие 30 дней будут накапливаться заново автоматически.
+            </p>
+            <div className="srv-modal-actions">
+              <button
+                className="srv-modal-cancel"
+                onClick={() => setShowClearModal(false)}
+                disabled={clearing}
+              >
+                Отмена
+              </button>
+              <button
+                className="srv-modal-confirm"
+                onClick={handleClearHistory}
+                disabled={clearing}
+              >
+                {clearing ? "Очистка..." : "Да, очистить"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx global>{`
+        .srv-modal-overlay {
+          position: fixed; inset: 0; z-index: 50;
+          background: rgba(0,0,0,0.45);
+          display: flex; align-items: center; justify-content: center;
+          backdrop-filter: blur(2px);
+        }
+        .srv-modal-card {
+          background: ${isDark ? "#1e293b" : "#ffffff"};
+          border: 1px solid ${isDark ? "#334155" : "#e2e8f0"};
+          border-radius: 1rem; padding: 2rem;
+          width: 100%; max-width: 400px; margin: 1rem;
+          display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        }
+        .srv-modal-icon {
+          width: 3.5rem; height: 3.5rem; border-radius: 9999px;
+          background: ${isDark ? "rgba(239,68,68,0.12)" : "#fef2f2"};
+          display: flex; align-items: center; justify-content: center;
+        }
+        .srv-modal-title {
+          font-size: 1.1rem; font-weight: 700;
+          color: ${isDark ? "#f1f5f9" : "#0f172a"};
+          margin: 0;
+        }
+        .srv-modal-text {
+          font-size: 0.85rem; line-height: 1.6; text-align: center;
+          color: ${isDark ? "#94a3b8" : "#64748b"};
+          margin: 0;
+        }
+        .srv-modal-actions {
+          display: flex; gap: 0.75rem; margin-top: 0.5rem; width: 100%;
+        }
+        .srv-modal-cancel {
+          flex: 1; padding: 0.6rem 1rem; border-radius: 0.5rem;
+          font-size: 0.875rem; font-weight: 500; cursor: pointer;
+          border: 1px solid ${isDark ? "#334155" : "#e2e8f0"};
+          background: ${isDark ? "#0f172a" : "#f8fafc"};
+          color: ${isDark ? "#94a3b8" : "#64748b"};
+          transition: all 0.15s;
+        }
+        .srv-modal-cancel:hover:not(:disabled) {
+          background: ${isDark ? "#1e293b" : "#f1f5f9"};
+        }
+        .srv-modal-confirm {
+          flex: 1; padding: 0.6rem 1rem; border-radius: 0.5rem;
+          font-size: 0.875rem; font-weight: 600; cursor: pointer;
+          border: none;
+          background: #ef4444; color: #fff;
+          transition: all 0.15s;
+        }
+        .srv-modal-confirm:hover:not(:disabled) { background: #dc2626; }
+        .srv-modal-confirm:disabled, .srv-modal-cancel:disabled { opacity: 0.6; cursor: not-allowed; }
+      `}</style>
+
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 export default function AddServicePage() {
   return (
-    <div className="p-6">
+    <div className="px-6 py-8">
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
         Добавление сервиса
       </h1>

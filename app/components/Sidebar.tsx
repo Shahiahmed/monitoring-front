@@ -46,7 +46,6 @@ const navigation: NavItem[] = [
     ),
     children: [
       { name: 'Журнал событий', href: '/incidents/events' },
-      { name: 'Добавить событие', href: '/incidents/add', adminOnly: true },
       { name: 'Статистика', href: '/incidents/statistics' },
       { name: 'Доступность ИС', href: '/incidents/availability' },
     ],
@@ -78,6 +77,8 @@ const navigation: NavItem[] = [
       { name: 'ИС', href: '/references/information-systems' },
       { name: 'Типы взаимодействия', href: '/references/interaction-types' },
       { name: 'Типы приложения', href: '/references/application-types' },
+      { name: 'Типы инцидентов', href: '/references/failure-types' },
+      { name: 'Серверы', href: '/references/servers' },
     ],
   },
   {
@@ -119,7 +120,7 @@ const navigation: NavItem[] = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ className = "" }: { className?: string }) {
   const pathname = usePathname();
   const router = useRouter();
   // Всегда начинаем с false для совместимости SSR
@@ -127,6 +128,7 @@ export default function Sidebar() {
   const [mounted, setMounted] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [userIsAdminOrSuper, setUserIsAdminOrSuper] = useState(false);
+
 
   useEffect(() => {
     try {
@@ -144,6 +146,9 @@ export default function Sidebar() {
       setUserIsAdminOrSuper(false);
     }
   }, [pathname]);
+
+  useEffect(() => {
+  }, [pathname, collapsed, mounted]);
 
   useEffect(() => {
     // Фиксируем высоту сайдбара по viewport (решает баг при первом входе после логина)
@@ -262,7 +267,7 @@ export default function Sidebar() {
           height: 'var(--sidebar-height, calc(100vh - 4rem))',
           top: '4rem',
         }}
-        className="glass fixed left-0 overflow-hidden z-40 transition-[width] duration-300 ease-in-out flex flex-col group/sidebar border-r border-white/40 dark:border-white/10"
+        className={`glass fixed left-0 overflow-hidden z-40 transition-[width] duration-300 ease-in-out flex flex-col group/sidebar border-r border-white/40 dark:border-white/10 ${className}`}
       >
         {/* Прокручиваемая область меню */}
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-4 sidebar-scroll">
@@ -345,6 +350,7 @@ export default function Sidebar() {
                               !child.adminOnly || userIsAdminOrSuper,
                           ).map((child) => {
                             const isChildActive = normalizePath(pathname) === normalizePath(child.href);
+
                             return (
                               <Link
                                 key={child.href}

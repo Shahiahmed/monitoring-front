@@ -1,60 +1,135 @@
-import { LineChart, BarChart } from "./components/Charts";
+"use client";
+
+import { useEffect, useState } from "react";
+import { ActivityChart, DowntimeChart, type DashboardData } from "./components/Charts";
+import { apiFetch } from "./lib/api";
 import Link from "next/link";
 
+interface MonthPoint { month: string; count: number; totalMinutes: number; }
+interface TypeCount  { name: string; count: number; totalMinutes: number; }
+interface IsAvailability { id: number; nameRu: string | null; availabilityPercent: number; }
+interface StatsPayload {
+  byMonth?: MonthPoint[];
+  byType?: TypeCount[];
+  byIsAvailability?: IsAvailability[];
+  totalDowntimeMinutes?: number;
+}
+
+interface SummaryStats {
+  incidentCount: number;
+  worksCount: number;
+  prtgCount: number;
+  downtimeMins: number;
+  avgAvailability: number | null;
+}
+
+const EMPTY: DashboardData = { incidents: [], works: [], prtg: [] };
+const EMPTY_SUMMARY: SummaryStats = { incidentCount: 0, worksCount: 0, prtgCount: 0, downtimeMins: 0, avgAvailability: null };
+
+function formatHhMm(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} мин`;
+  if (m === 0) return `${h} ч`;
+  return `${h} ч ${m} мин`;
+}
+
 export default function Home() {
-  const stats = [
+  const [data, setData]       = useState<DashboardData>(EMPTY);
+  const [summary, setSummary] = useState<SummaryStats>(EMPTY_SUMMARY);
+  const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("authUser") ?? "{}");
+      setIsAdmin(u?.roles?.some((r: { code?: string } | string) =>
+        ["ADMIN", "SUPER_ADMIN"].includes(typeof r === "string" ? r : (r.code ?? ""))));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const year = new Date().getFullYear();
+        const dateFrom = new Date(`${year}-01-01T00:00:00`).toISOString();
+        const dateTo   = new Date(`${year}-12-31T23:59:59`).toISOString();
+        const q = `?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+
+        const [incRes, wrkRes] = await Promise.all([
+          apiFetch(`incidents/stats${q}`),
+          apiFetch(`works/stats${q}`),
+        ]);
+        const incData: StatsPayload = incRes.ok ? await incRes.json() : {};
+        const wrkData: StatsPayload = wrkRes.ok ? await wrkRes.json() : {};
+
+        let prtgMonths: MonthPoint[] = [];
+        let prtgCount = 0;
+        if (isAdmin) {
+          const prtgRes = await apiFetch(`prtg-alerts/stats${q}`);
+          const prtgData: StatsPayload = prtgRes.ok ? await prtgRes.json() : {};
+          prtgMonths = prtgData.byMonth ?? [];
+          prtgCount = (prtgData.byType ?? []).reduce((s, t) => s + t.count, 0);
+        }
+
+        const incidentCount = (incData.byType ?? []).reduce((s, t) => s + t.count, 0);
+        const worksCount    = (wrkData.byType ?? []).reduce((s, t) => s + t.count, 0);
+        const downtimeMins  = incData.totalDowntimeMinutes ?? 0;
+
+        const availList = incData.byIsAvailability ?? [];
+        const avgAvailability = availList.length > 0
+          ? availList.reduce((s, a) => s + a.availabilityPercent, 0) / availList.length
+          : null;
+
+        setSummary({ incidentCount, worksCount, prtgCount, downtimeMins, avgAvailability });
+        setData({ incidents: incData.byMonth ?? [], works: wrkData.byMonth ?? [], prtg: prtgMonths });
+      } catch { /* ignore */ }
+      finally { setLoading(false); }
+    })();
+  }, [isAdmin]);
+
+  const year = new Date().getFullYear();
+
+  const statCards = [
     {
-      title: "CPU Использование",
-      value: "45%",
-      change: "+2.3%",
-      trend: "up",
+      title: "Инциденты",
+      value: loading ? "…" : String(summary.incidentCount),
+      sub: `зафиксировано в ${year} г.`,
       color: "bg-blue-500",
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      ),
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>,
     },
     {
-      title: "Память",
-      value: "62%",
-      change: "-1.2%",
-      trend: "down",
+      title: "Работы",
+      value: loading ? "…" : String(summary.worksCount),
+      sub: `выполнено в ${year} г.`,
       color: "bg-green-500",
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-        </svg>
-      ),
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
     },
     {
-      title: "Активные инциденты",
-      value: "12",
-      change: "-3",
-      trend: "down",
+      title: "Суммарный простой",
+      value: loading ? "…" : formatHhMm(summary.downtimeMins),
+      sub: `по инцидентам за ${year} г.`,
       color: "bg-red-500",
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-      ),
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
     },
     {
-      title: "Доступность",
-      value: "99.9%",
-      change: "+0.1%",
-      trend: "up",
+      title: "Средняя доступность",
+      value: loading ? "…" : summary.avgAvailability !== null
+        ? (() => {
+            const v = summary.avgAvailability!;
+            if (v >= 100 - 1e-9) return "100 %";
+            const r = v.toFixed(2);
+            return (r.startsWith("100") ? (Math.floor(v * 100) / 100).toFixed(2) : r) + " %";
+          })()
+        : "—",
+      sub: `по ИС МТЗСН за ${year} г.`,
       color: "bg-purple-500",
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
     },
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="px-6 py-8">
       <div className="space-y-6">
         {/* Заголовок */}
         <div className="flex items-center justify-between">
@@ -63,62 +138,62 @@ export default function Home() {
               Панель мониторинга
             </h1>
             <p className="text-muted mt-0.5">
-              Обзор производительности и статистики системы
+              Статистика за {new Date().getFullYear()} год
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-3">
             <Link
               href="/servers"
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+              className="group flex min-w-[min(100%,220px)] max-w-sm items-center gap-3 rounded-xl border border-slate-200/90 bg-white/90 px-3 py-2.5 shadow-card transition-all hover:border-blue-400/50 hover:shadow-card-hover dark:border-slate-700/90 dark:bg-slate-900/60 dark:hover:border-blue-500/40"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
-              </svg>
-              Серверы
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-600/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" /></svg>
+              </span>
+              <span className="min-w-0 flex-1 text-left">
+                <span className="block text-sm font-semibold text-gray-900 dark:text-white">Серверы</span>
+                <span className="block text-xs text-gray-500 dark:text-gray-400">Список хостов и метрики</span>
+              </span>
+              <svg className="w-5 h-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-600 dark:text-gray-500 dark:group-hover:text-blue-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
             </Link>
-            <span className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              Система работает
-            </span>
           </div>
         </div>
 
-        {/* Статистика */}
+        {/* Сводка */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, index) => (
-            <div
-              key={index}
-              className="glass-card rounded-xl p-4 transition-shadow duration-200"
-            >
+          {statCards.map((card, i) => (
+            <div key={i} className="glass-card rounded-xl p-4 transition-shadow duration-200">
               <div className="flex items-center justify-between">
-                <div className={`${stat.color} p-2 rounded-lg text-white`}>
-                  {stat.icon}
-                </div>
-                <span
-                  className={`text-xs font-medium ${
-                    stat.trend === "up"
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-red-600 dark:text-red-400"
-                  }`}
-                >
-                  {stat.change}
-                </span>
+                <div className={`${card.color} p-2 rounded-lg text-white`}>{card.icon}</div>
               </div>
-              <p className="text-muted mt-3">{stat.title}</p>
-              <p className="text-xl font-semibold text-gray-900 dark:text-white mt-0.5 tracking-tight tabular-nums">{stat.value}</p>
+              <p className="text-muted mt-3">{card.title}</p>
+              <p className="text-xl font-semibold text-gray-900 dark:text-white mt-0.5 tracking-tight tabular-nums">{card.value}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{card.sub}</p>
             </div>
           ))}
         </div>
 
         {/* Графики */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="glass-card rounded-xl p-6">
-            <LineChart />
+        {loading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {[0, 1].map(i => (
+              <div key={i} className="glass-card rounded-xl p-6 flex items-center justify-center h-85">
+                <svg className="animate-spin w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              </div>
+            ))}
           </div>
-          <div className="glass-card rounded-xl p-6">
-            <BarChart />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="glass-card rounded-xl p-6">
+              <ActivityChart data={data} isAdmin={isAdmin} />
+            </div>
+            <div className="glass-card rounded-xl p-6">
+              <DowntimeChart data={data} />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -4,416 +4,164 @@ import { useEffect, useRef } from 'react';
 import * as echarts from 'echarts';
 import { useTheme } from './ThemeProvider';
 
-export function LineChart() {
-  const chartRef = useRef<HTMLDivElement>(null);
-  const chartInstance = useRef<echarts.ECharts | null>(null);
-  const { theme } = useTheme();
+interface MonthPoint { month: string; count: number; totalMinutes: number; }
 
-  useEffect(() => {
-    if (!chartRef.current) return;
-    // Инициализируем график
-    if (!chartInstance.current) {
-      chartInstance.current = echarts.init(chartRef.current);
-    }
-
-    const option: echarts.EChartsOption = {
-      backgroundColor: 'transparent',
-      animation: true,
-      animationDuration: 1200,
-      animationEasing: 'cubicOut',
-      animationDurationUpdate: 800,
-      title: {
-        text: 'Мониторинг производительности',
-        left: 'center',
-        top: 10,
-        textStyle: {
-          color: theme === 'dark' ? '#f9fafb' : '#111827',
-          fontSize: 18,
-          fontWeight: 'bold',
-        },
-      },
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: theme === 'dark' ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-        borderColor: theme === 'dark' ? '#4b5563' : '#e5e7eb',
-        textStyle: {
-          color: theme === 'dark' ? '#f9fafb' : '#111827',
-        },
-        axisPointer: {
-          type: 'cross',
-          crossStyle: {
-            color: theme === 'dark' ? '#6b7280' : '#9ca3af',
-          },
-        },
-      },
-      legend: {
-        data: ['CPU', 'Память', 'Сеть'],
-        top: 45,
-        textStyle: {
-          color: theme === 'dark' ? '#d1d5db' : '#6b7280',
-          fontSize: 12,
-        },
-        itemGap: 20,
-      },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '8%',
-        top: '25%',
-        containLabel: true,
-      },
-      xAxis: {
-        type: 'category',
-        boundaryGap: false,
-        data: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'],
-        axisLabel: {
-          color: theme === 'dark' ? '#9ca3af' : '#6b7280',
-        },
-        axisLine: {
-          lineStyle: {
-            color: theme === 'dark' ? '#374151' : '#e5e7eb',
-          },
-        },
-      },
-      yAxis: {
-        type: 'value',
-        axisLabel: {
-          color: theme === 'dark' ? '#9ca3af' : '#6b7280',
-        },
-        axisLine: {
-          lineStyle: {
-            color: theme === 'dark' ? '#374151' : '#e5e7eb',
-          },
-        },
-        splitLine: {
-          lineStyle: {
-            color: theme === 'dark' ? '#374151' : '#f3f4f6',
-          },
-        },
-      },
-      series: [
-        {
-          name: 'CPU',
-          type: 'line',
-          data: [20, 35, 45, 30, 55, 40, 35],
-          smooth: true,
-          symbol: 'circle',
-          symbolSize: 6,
-          lineStyle: {
-            width: 3,
-            color: '#3b82f6',
-          },
-          itemStyle: {
-            color: '#3b82f6',
-            borderWidth: 2,
-            borderColor: '#fff',
-          },
-          areaStyle: {
-            color: {
-              type: 'linear',
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                { offset: 0, color: 'rgba(59, 130, 246, 0.4)' },
-                { offset: 1, color: 'rgba(59, 130, 246, 0.05)' },
-              ],
-            },
-          },
-          emphasis: {
-            focus: 'series',
-            itemStyle: {
-              borderWidth: 3,
-            },
-          },
-          animationDelay: (idx: number) => idx * 100,
-        },
-        {
-          name: 'Память',
-          type: 'line',
-          data: [30, 40, 50, 45, 60, 50, 45],
-          smooth: true,
-          symbol: 'circle',
-          symbolSize: 6,
-          lineStyle: {
-            width: 3,
-            color: '#10b981',
-          },
-          itemStyle: {
-            color: '#10b981',
-            borderWidth: 2,
-            borderColor: '#fff',
-          },
-          areaStyle: {
-            color: {
-              type: 'linear',
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                { offset: 0, color: 'rgba(16, 185, 129, 0.4)' },
-                { offset: 1, color: 'rgba(16, 185, 129, 0.05)' },
-              ],
-            },
-          },
-          emphasis: {
-            focus: 'series',
-            itemStyle: {
-              borderWidth: 3,
-            },
-          },
-          animationDelay: (idx: number) => idx * 100,
-        },
-        {
-          name: 'Сеть',
-          type: 'line',
-          data: [15, 25, 35, 30, 40, 35, 30],
-          smooth: true,
-          symbol: 'circle',
-          symbolSize: 6,
-          lineStyle: {
-            width: 3,
-            color: '#f59e0b',
-          },
-          itemStyle: {
-            color: '#f59e0b',
-            borderWidth: 2,
-            borderColor: '#fff',
-          },
-          areaStyle: {
-            color: {
-              type: 'linear',
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                { offset: 0, color: 'rgba(245, 158, 11, 0.4)' },
-                { offset: 1, color: 'rgba(245, 158, 11, 0.05)' },
-              ],
-            },
-          },
-          emphasis: {
-            focus: 'series',
-            itemStyle: {
-              borderWidth: 3,
-            },
-          },
-          animationDelay: (idx: number) => idx * 100,
-        },
-      ],
-    };
-
-    chartInstance.current.setOption(option);
-
-    // Обработка изменения размера окна и контейнера
-    const handleResize = () => {
-      chartInstance.current?.resize();
-    };
-    window.addEventListener('resize', handleResize);
-
-    const resizeObserver = new ResizeObserver(() => {
-      handleResize();
-    });
-    if (chartRef.current) {
-      resizeObserver.observe(chartRef.current);
-    }
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      resizeObserver.disconnect();
-    };
-  }, [theme]);
-
-  return <div ref={chartRef} className="w-full h-[400px]" />;
+function useChartColors(theme: string) {
+  const isDark = theme === 'dark';
+  return {
+    text:      isDark ? '#f9fafb' : '#111827',
+    subText:   isDark ? '#9ca3af' : '#6b7280',
+    splitLine: isDark ? '#374151' : '#f3f4f6',
+    tooltipBg: isDark ? 'rgba(31,41,55,0.95)' : 'rgba(255,255,255,0.95)',
+    tooltipBd: isDark ? '#4b5563' : '#e5e7eb',
+  };
 }
 
-export function BarChart() {
-  const chartRef = useRef<HTMLDivElement>(null);
-  const chartInstance = useRef<echarts.ECharts | null>(null);
+const RU_MONTHS = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+function shortMonth(yyyyMm: string): string {
+  const [y, m] = yyyyMm.split('-');
+  return `${RU_MONTHS[parseInt(m, 10) - 1] ?? m} ${y?.slice(2)}`;
+}
+
+export interface DashboardData {
+  incidents: MonthPoint[];
+  works: MonthPoint[];
+  prtg: MonthPoint[];
+}
+
+export function ActivityChart({ data, isAdmin }: { data: DashboardData; isAdmin?: boolean }) {
+  const ref  = useRef<HTMLDivElement>(null);
+  const inst = useRef<echarts.ECharts | null>(null);
   const { theme } = useTheme();
+  const c = useChartColors(theme);
 
   useEffect(() => {
-    if (!chartRef.current) return;
+    if (!ref.current) return;
+    if (!inst.current) inst.current = echarts.init(ref.current);
 
-    if (!chartInstance.current) {
-      chartInstance.current = echarts.init(chartRef.current);
-    }
+    const allMonths = Array.from(new Set([
+      ...data.incidents.map(d => d.month),
+      ...data.works.map(d => d.month),
+      ...(isAdmin ? data.prtg.map(d => d.month) : []),
+    ])).sort();
 
-    const option: echarts.EChartsOption = {
+    const get = (arr: MonthPoint[], m: string) => arr.find(d => d.month === m)?.count ?? 0;
+
+    const legendData = isAdmin ? ['Инциденты', 'Работы', 'Тревоги PRTG'] : ['Инциденты', 'Работы'];
+    const legendSelected: Record<string, boolean> = { 'Инциденты': true, 'Работы': false, 'Тревоги PRTG': false };
+
+    const series = [
+      { name: 'Инциденты', type: 'bar',
+        data: allMonths.map(m => get(data.incidents, m)),
+        itemStyle: { color: '#3b82f6', borderRadius: [3,3,0,0] },
+        emphasis: { itemStyle: { opacity: 0.85 } },
+        label: { show: true, position: 'top', fontSize: 10, color: c.subText, formatter: (p: {value: number}) => p.value === 0 ? '' : String(p.value) } },
+      { name: 'Работы', type: 'bar',
+        data: allMonths.map(m => get(data.works, m)),
+        itemStyle: { color: '#10b981', borderRadius: [3,3,0,0] },
+        emphasis: { itemStyle: { opacity: 0.85 } },
+        label: { show: true, position: 'top', fontSize: 10, color: c.subText, formatter: (p: {value: number}) => p.value === 0 ? '' : String(p.value) } },
+      ...(isAdmin ? [{ name: 'Тревоги PRTG', type: 'bar',
+        data: allMonths.map(m => get(data.prtg, m)),
+        itemStyle: { color: '#f59e0b', borderRadius: [3,3,0,0] },
+        emphasis: { itemStyle: { opacity: 0.85 } },
+        label: { show: true, position: 'top', fontSize: 10, color: c.subText, formatter: (p: {value: number}) => p.value === 0 ? '' : String(p.value) } }] : []),
+    ];
+
+    inst.current.setOption({
       backgroundColor: 'transparent',
-      animation: true,
-      animationDuration: 1000,
-      animationEasing: 'cubicOut',
-      animationDurationUpdate: 700,
-      title: {
-        text: 'Статистика инцидентов',
-        left: 'center',
-        top: 10,
-        textStyle: {
-          color: theme === 'dark' ? '#f9fafb' : '#111827',
-          fontSize: 18,
-          fontWeight: 'bold',
-        },
-      },
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: theme === 'dark' ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-        borderColor: theme === 'dark' ? '#4b5563' : '#e5e7eb',
-        textStyle: {
-          color: theme === 'dark' ? '#f9fafb' : '#111827',
-        },
-        axisPointer: {
-          type: 'shadow',
-          shadowStyle: {
-            color: theme === 'dark' ? 'rgba(75, 85, 99, 0.3)' : 'rgba(0, 0, 0, 0.1)',
-          },
-        },
-      },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '8%',
-        top: '20%',
-        containLabel: true,
-      },
-      xAxis: {
-        type: 'category',
-        data: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-        axisLabel: {
-          color: theme === 'dark' ? '#9ca3af' : '#6b7280',
-        },
-        axisLine: {
-          lineStyle: {
-            color: theme === 'dark' ? '#374151' : '#e5e7eb',
-          },
-        },
-      },
-      yAxis: {
-        type: 'value',
-        axisLabel: {
-          color: theme === 'dark' ? '#9ca3af' : '#6b7280',
-        },
-        axisLine: {
-          lineStyle: {
-            color: theme === 'dark' ? '#374151' : '#e5e7eb',
-          },
-        },
-        splitLine: {
-          lineStyle: {
-            color: theme === 'dark' ? '#374151' : '#f3f4f6',
-          },
-        },
-      },
-      series: [
-        {
-          name: 'Критические',
-          type: 'bar',
-          data: [5, 8, 3, 6, 4, 2, 1],
-          itemStyle: {
-            color: {
-              type: 'linear',
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                { offset: 0, color: '#ef4444' },
-                { offset: 1, color: '#dc2626' },
-              ],
-            },
-            borderRadius: [4, 4, 0, 0],
-          },
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 10,
-              shadowColor: 'rgba(239, 68, 68, 0.5)',
-            },
-          },
-        },
-        {
-          name: 'Предупреждения',
-          type: 'bar',
-          data: [12, 15, 10, 18, 14, 8, 6],
-          itemStyle: {
-            color: {
-              type: 'linear',
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                { offset: 0, color: '#f59e0b' },
-                { offset: 1, color: '#d97706' },
-              ],
-            },
-            borderRadius: [4, 4, 0, 0],
-          },
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 10,
-              shadowColor: 'rgba(245, 158, 11, 0.5)',
-            },
-          },
-        },
-        {
-          name: 'Информационные',
-          type: 'bar',
-          data: [25, 30, 28, 35, 32, 20, 15],
-          itemStyle: {
-            color: {
-              type: 'linear',
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                { offset: 0, color: '#3b82f6' },
-                { offset: 1, color: '#2563eb' },
-              ],
-            },
-            borderRadius: [4, 4, 0, 0],
-          },
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 10,
-              shadowColor: 'rgba(59, 130, 246, 0.5)',
-            },
-          },
-        },
-      ],
-      legend: {
-        data: ['Критические', 'Предупреждения', 'Информационные'],
-        top: 45,
-        textStyle: {
-          color: theme === 'dark' ? '#d1d5db' : '#6b7280',
-          fontSize: 12,
-        },
-        itemGap: 20,
-      },
-    };
-
-    chartInstance.current.setOption(option);
-
-    const handleResize = () => {
-      chartInstance.current?.resize();
-    };
-    window.addEventListener('resize', handleResize);
-
-    const resizeObserver = new ResizeObserver(() => {
-      handleResize();
+      title: { text: 'Активность по месяцам', left: 'center', top: 8,
+        textStyle: { color: c.text, fontSize: 14, fontWeight: 700 } },
+      tooltip: { trigger: 'axis', backgroundColor: c.tooltipBg, borderColor: c.tooltipBd,
+        textStyle: { color: c.text } },
+      legend: { bottom: 0, textStyle: { color: c.subText, fontSize: 11 },
+        data: legendData, selected: legendSelected },
+      grid: { left: 40, right: 16, top: 48, bottom: 48, containLabel: false },
+      xAxis: { type: 'category', data: allMonths.map(shortMonth),
+        axisLabel: { color: c.subText, fontSize: 10, rotate: allMonths.length > 8 ? 30 : 0 },
+        axisLine: { lineStyle: { color: c.splitLine } } },
+      yAxis: { type: 'value', minInterval: 1,
+        splitLine: { lineStyle: { color: c.splitLine } },
+        axisLabel: { color: c.subText } },
+      series,
     });
-    if (chartRef.current) {
-      resizeObserver.observe(chartRef.current);
-    }
+  }, [data, theme, c, isAdmin]);
 
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      resizeObserver.disconnect();
+  useEffect(() => {
+    const f = () => inst.current?.resize();
+    window.addEventListener('resize', f);
+    return () => window.removeEventListener('resize', f);
+  }, []);
+
+  return <div ref={ref} className="w-full h-85" />;
+}
+
+export function DowntimeChart({ data }: { data: DashboardData }) {
+  const ref  = useRef<HTMLDivElement>(null);
+  const inst = useRef<echarts.ECharts | null>(null);
+  const { theme } = useTheme();
+  const c = useChartColors(theme);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    if (!inst.current) inst.current = echarts.init(ref.current);
+
+    const allMonths = Array.from(new Set([
+      ...data.incidents.map(d => d.month),
+      ...data.works.map(d => d.month),
+    ])).sort();
+
+    const getRawMins = (arr: MonthPoint[], m: string) =>
+      Math.round(arr.find(d => d.month === m)?.totalMinutes ?? 0);
+
+    const fmtHhMm = (mins: number) => {
+      if (mins === 0) return '';
+      const h = Math.floor(mins / 60), m = mins % 60;
+      if (h === 0) return `${m} мин`;
+      if (m === 0) return `${h} ч`;
+      return `${h} ч ${m} мин`;
     };
-  }, [theme]);
 
-  return <div ref={chartRef} className="w-full h-[400px]" />;
+    inst.current.setOption({
+      backgroundColor: 'transparent',
+      title: { text: 'Простой по месяцам', left: 'center', top: 8,
+        textStyle: { color: c.text, fontSize: 14, fontWeight: 700 } },
+      tooltip: { trigger: 'axis', backgroundColor: c.tooltipBg, borderColor: c.tooltipBd,
+        textStyle: { color: c.text },
+        formatter: (params: echarts.DefaultLabelFormatterCallbackParams[]) =>
+          params.filter((p: echarts.DefaultLabelFormatterCallbackParams) => (p.value as number) > 0)
+            .map((p: echarts.DefaultLabelFormatterCallbackParams) => `${p.seriesName}: ${fmtHhMm(p.value as number)}`).join('<br/>') },
+      legend: { bottom: 0, textStyle: { color: c.subText, fontSize: 11 },
+        data: ['Инциденты', 'Работы'],
+        selected: { 'Инциденты': true, 'Работы': false } },
+      grid: { left: 48, right: 16, top: 48, bottom: 48, containLabel: false },
+      xAxis: { type: 'category', data: allMonths.map(shortMonth),
+        axisLabel: { color: c.subText, fontSize: 10, rotate: allMonths.length > 8 ? 30 : 0 },
+        axisLine: { lineStyle: { color: c.splitLine } } },
+      yAxis: { type: 'value', name: 'мин',
+        nameTextStyle: { color: c.subText },
+        splitLine: { lineStyle: { color: c.splitLine } },
+        axisLabel: { color: c.subText, formatter: (v: number) => v >= 60 ? `${Math.floor(v/60)}ч` : `${v}м` } },
+      series: [
+        { name: 'Инциденты', type: 'bar',
+          data: allMonths.map(m => getRawMins(data.incidents, m)),
+          itemStyle: { color: '#ef4444', borderRadius: [3,3,0,0] },
+          emphasis: { itemStyle: { opacity: 0.85 } },
+          label: { show: true, position: 'top', fontSize: 10, color: c.subText, formatter: (p: {value: number}) => fmtHhMm(p.value) } },
+        { name: 'Работы', type: 'bar',
+          data: allMonths.map(m => getRawMins(data.works, m)),
+          itemStyle: { color: '#10b981', borderRadius: [3,3,0,0] },
+          emphasis: { itemStyle: { opacity: 0.85 } },
+          label: { show: true, position: 'top', fontSize: 10, color: c.subText, formatter: (p: {value: number}) => fmtHhMm(p.value) } },
+      ],
+    });
+  }, [data, theme, c]);
+
+  useEffect(() => {
+    const f = () => inst.current?.resize();
+    window.addEventListener('resize', f);
+    return () => window.removeEventListener('resize', f);
+  }, []);
+
+  return <div ref={ref} className="w-full h-85" />;
 }

@@ -61,7 +61,13 @@ function AvatarCell({
   );
 }
 
-type SortKey = "name" | "email" | "role" | "status" | "registrationDate" | "lastLoginDate";
+type SortKey =
+  | "name"
+  | "email"
+  | "role"
+  | "status"
+  | "registrationDate"
+  | "lastLoginDate";
 type SortDir = "asc" | "desc";
 
 interface AuthUser {
@@ -127,10 +133,12 @@ export default function UsersPage() {
   const [deleteModalSaving, setDeleteModalSaving] = useState(false);
   const [deleteModalError, setDeleteModalError] = useState<string | null>(null);
   const [togglingActiveId, setTogglingActiveId] = useState<number | null>(null);
+  const [changingRoleId, setChangingRoleId] = useState<number | null>(null);
 
   useEffect(() => {
     try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem("authUser") : null;
+      const raw =
+        typeof window !== "undefined" ? localStorage.getItem("authUser") : null;
       if (!raw) return;
       const parsed = JSON.parse(raw) as AuthUser;
       setCurrentUser(parsed);
@@ -196,8 +204,14 @@ export default function UsersPage() {
     return [...filtered].sort((a, b) => {
       switch (sortKey) {
         case "name": {
-          const nameA = [a.lastName, a.firstName, a.secondName].filter(Boolean).join(" ").toLowerCase();
-          const nameB = [b.lastName, b.firstName, b.secondName].filter(Boolean).join(" ").toLowerCase();
+          const nameA = [a.lastName, a.firstName, a.secondName]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          const nameB = [b.lastName, b.firstName, b.secondName]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
           return nameA.localeCompare(nameB, "ru") * dir;
         }
         case "email":
@@ -205,10 +219,14 @@ export default function UsersPage() {
         case "role":
           return (getRolePriority(a.roles) - getRolePriority(b.roles)) * dir;
         case "status":
-          return ((a.isActive === b.isActive) ? 0 : a.isActive ? -1 : 1) * dir;
+          return (a.isActive === b.isActive ? 0 : a.isActive ? -1 : 1) * dir;
         case "registrationDate": {
-          const da = a.registrationDate ? new Date(a.registrationDate).getTime() : 0;
-          const db = b.registrationDate ? new Date(b.registrationDate).getTime() : 0;
+          const da = a.registrationDate
+            ? new Date(a.registrationDate).getTime()
+            : 0;
+          const db = b.registrationDate
+            ? new Date(b.registrationDate).getTime()
+            : 0;
           return (da - db) * dir;
         }
         case "lastLoginDate": {
@@ -451,6 +469,23 @@ export default function UsersPage() {
     }
   };
 
+  const handleChangeRole = async (user: User, newRole: string) => {
+    if (!isSuperAdmin(currentUser)) return;
+    if (user.id === currentUser?.id) return;
+    setChangingRoleId(user.id);
+    try {
+      const res = await apiFetch(`users/${user.id}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roleCode: newRole }),
+      });
+      if (!res.ok) { alert((await res.text()) || "Не удалось изменить роль"); return; }
+      const data = await res.json() as { roles?: string[] };
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, roles: data.roles ?? [newRole] } : u));
+    } catch { alert("Ошибка сети"); }
+    finally { setChangingRoleId(null); }
+  };
+
   const handleToggleUserActive = async (user: User, nextActive: boolean) => {
     if (!isSuperAdmin(currentUser)) return;
     if (
@@ -501,8 +536,8 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8">
+    <div className="px-6 py-8">
+      <div>
         {/* Заголовок и действия */}
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
@@ -526,47 +561,47 @@ export default function UsersPage() {
         {/* Фильтры и поиск */}
         <div className="mb-6 rounded-xl border border-slate-200/80 bg-white/75 p-4 shadow-soft backdrop-blur dark:border-slate-700 dark:bg-slate-900/40">
           <div className="flex flex-col gap-4 sm:flex-row">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Поиск по email, имени, фамилии..."
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-300 dark:border-gray-700 rounded bg-slate-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-500"
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => handleFilterChange(null)}
-              className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
-                filterActive === null
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-slate-300 dark:hover:bg-gray-700"
-              }`}
-            >
-              Все
-            </button>
-            <button
-              onClick={() => handleFilterChange(true)}
-              className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
-                filterActive === true
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-slate-300 dark:hover:bg-gray-700"
-              }`}
-            >
-              Активные
-            </button>
-            <button
-              onClick={() => handleFilterChange(false)}
-              className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
-                filterActive === false
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-slate-300 dark:hover:bg-gray-700"
-              }`}
-            >
-              Неактивные
-            </button>
-          </div>
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Поиск по email, имени, фамилии..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-300 dark:border-gray-700 rounded bg-slate-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-500"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => handleFilterChange(null)}
+                className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
+                  filterActive === null
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-slate-300 dark:hover:bg-gray-700"
+                }`}
+              >
+                Все
+              </button>
+              <button
+                onClick={() => handleFilterChange(true)}
+                className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
+                  filterActive === true
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-slate-300 dark:hover:bg-gray-700"
+                }`}
+              >
+                Активные
+              </button>
+              <button
+                onClick={() => handleFilterChange(false)}
+                className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
+                  filterActive === false
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-slate-300 dark:hover:bg-gray-700"
+                }`}
+              >
+                Неактивные
+              </button>
+            </div>
           </div>
         </div>
 
@@ -587,234 +622,312 @@ export default function UsersPage() {
           <div className="glass-card overflow-hidden rounded-xl border border-slate-200/70 dark:border-slate-700/70">
             <div className="overflow-x-auto">
               <table className="w-full">
-              <thead className="bg-slate-100 dark:bg-gray-800 border-b border-slate-300 dark:border-gray-700">
-                <tr>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
-                    №
-                  </th>
-                  {([
-                    { key: "name" as SortKey, label: "Пользователь", align: "left" },
-                    { key: "role" as SortKey, label: "Роль", align: "left" },
-                    { key: "status" as SortKey, label: "Статус", align: "left" },
-                    { key: "registrationDate" as SortKey, label: "Дата регистрации", align: "left" },
-                    { key: "lastLoginDate" as SortKey, label: "Последний вход", align: "left" },
-                  ]).map((col) => (
-                    <th
-                      key={col.key}
-                      onClick={() => handleSort(col.key)}
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer select-none hover:text-gray-900 dark:hover:text-white transition-colors"
-                    >
-                      <span className="inline-flex items-center gap-1">
-                        {col.label}
-                        {sortKey === col.key ? (
-                          <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
-                              d={sortDir === "asc" ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
-                          </svg>
-                        ) : (
-                          <svg className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                          </svg>
-                        )}
-                      </span>
-                    </th>
-                  ))}
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Действия
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-slate-100 dark:bg-slate-900 divide-y divide-slate-300 dark:divide-gray-800">
-                {paginatedUsers.length === 0 ? (
+                <thead className="bg-slate-100 dark:bg-gray-800 border-b border-slate-300 dark:border-gray-700">
                   <tr>
-                    <td
-                      colSpan={8}
-                      className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400"
-                    >
-                      Пользователи не найдены
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedUsers.map((user, index) => {
-                    const rowNumber = (currentPage - 1) * itemsPerPage + index + 1;
-                    const fullName = [user.lastName, user.firstName, user.secondName]
-                      .filter(Boolean)
-                      .join(" ");
-                    const initials = (
-                      (user.firstName?.[0] ?? "") + (user.lastName?.[0] ?? "")
-                    ).toUpperCase() || user.email[0].toUpperCase();
-
-                    return (
-                    <tr
-                      key={user.id}
-                      className="hover:bg-slate-200 dark:hover:bg-gray-800 transition-colors"
-                    >
-                      <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-400">
-                        {rowNumber}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <AvatarCell
-                            userId={user.id}
-                            initials={initials}
-                            hasAvatar={user.hasAvatar ?? false}
-                          />
-                          <div>
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {fullName || "—"}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {user.email}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            (user.roles ?? []).includes("SUPER_ADMIN")
-                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                              : (user.roles ?? []).includes("ADMIN")
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                              : "bg-slate-200 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
-                          }`}
-                        >
-                          {(user.roles ?? []).includes("SUPER_ADMIN")
-                            ? "Супер админ"
-                            : (user.roles ?? []).includes("ADMIN")
-                            ? "Админ"
-                            : "Пользователь"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                          <span
-                            className={`inline-flex w-fit items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              user.isActive
-                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                                : "bg-slate-200 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
-                            }`}
-                          >
-                            {user.isActive ? "Активен" : "Неактивен"}
-                          </span>
-                          {isSuperAdmin(currentUser) && (
-                            <button
-                              type="button"
-                              role="switch"
-                              aria-checked={user.isActive}
-                              aria-label={
-                                user.isActive
-                                  ? "Сделать неактивным"
-                                  : "Сделать активным"
-                              }
-                              title={
-                                user.isActive &&
-                                ((user.roles ?? []).includes("SUPER_ADMIN") ||
-                                  (currentUser?.id !== undefined &&
-                                    user.id === currentUser.id))
-                                  ? (user.roles ?? []).includes("SUPER_ADMIN")
-                                    ? "Супер-администратора нельзя деактивировать"
-                                    : "Нельзя деактивировать свою учётную запись"
-                                  : undefined
-                              }
-                              disabled={
-                                togglingActiveId === user.id ||
-                                (user.isActive &&
-                                  ((user.roles ?? []).includes("SUPER_ADMIN") ||
-                                    (currentUser?.id !== undefined &&
-                                      user.id === currentUser.id)))
-                              }
-                              onClick={() =>
-                                void handleToggleUserActive(user, !user.isActive)
-                              }
-                              className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:focus:ring-offset-slate-900 disabled:opacity-50 ${
-                                user.isActive
-                                  ? "bg-green-600"
-                                  : "bg-gray-300 dark:bg-gray-600"
-                              }`}
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
+                      №
+                    </th>
+                    {[
+                      {
+                        key: "name" as SortKey,
+                        label: "Пользователь",
+                        align: "left",
+                      },
+                      { key: "role" as SortKey, label: "Роль", align: "left" },
+                      {
+                        key: "status" as SortKey,
+                        label: "Статус",
+                        align: "left",
+                      },
+                      {
+                        key: "registrationDate" as SortKey,
+                        label: "Дата регистрации",
+                        align: "left",
+                      },
+                      {
+                        key: "lastLoginDate" as SortKey,
+                        label: "Последний вход",
+                        align: "left",
+                      },
+                    ].map((col) => (
+                      <th
+                        key={col.key}
+                        onClick={() => handleSort(col.key)}
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer select-none hover:text-gray-900 dark:hover:text-white transition-colors"
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {col.label}
+                          {sortKey === col.key ? (
+                            <svg
+                              className="h-3 w-3 flex-shrink-0"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
                             >
-                              <span
-                                className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
-                                  user.isActive
-                                    ? "translate-x-6"
-                                    : "translate-x-1"
-                                }`}
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2.5}
+                                d={
+                                  sortDir === "asc"
+                                    ? "M5 15l7-7 7 7"
+                                    : "M19 9l-7 7-7-7"
+                                }
                               />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {formatDate(user.registrationDate)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {formatDate(user.lastLoginDate)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {isAdminOrSuperAdmin(currentUser) && (
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(user)}
-                              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                              title="Редактировать"
+                            </svg>
+                          ) : (
+                            <svg
+                              className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-30"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
                             >
-                              <svg
-                                className="h-4 w-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                />
-                              </svg>
-                            </button>
-                            {isSuperAdmin(currentUser) && (
-                              <button
-                                type="button"
-                                disabled={!canSuperAdminDeleteUser(user)}
-                                onClick={() =>
-                                  canSuperAdminDeleteUser(user) &&
-                                  openDeleteModal(user)
-                                }
-                                className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40"
-                                title={
-                                  !canSuperAdminDeleteUser(user)
-                                    ? user.id === currentUser?.id
-                                      ? "Нельзя удалить свою учётную запись"
-                                      : userHasSuperAdminRole(user)
-                                        ? "Нельзя удалить супер-администратора"
-                                        : "Удаление недоступно"
-                                    : "Удалить пользователя"
-                                }
-                              >
-                                <svg
-                                  className="h-4 w-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                              </button>
-                            )}
-                          </div>
-                        )}
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                              />
+                            </svg>
+                          )}
+                        </span>
+                      </th>
+                    ))}
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Действия
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-slate-100 dark:bg-slate-900 divide-y divide-slate-300 dark:divide-gray-800">
+                  {paginatedUsers.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={8}
+                        className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400"
+                      >
+                        Пользователи не найдены
                       </td>
                     </tr>
-                    );
-                  })
-                )}
-              </tbody>
+                  ) : (
+                    paginatedUsers.map((user, index) => {
+                      const rowNumber =
+                        (currentPage - 1) * itemsPerPage + index + 1;
+                      const fullName = [
+                        user.lastName,
+                        user.firstName,
+                        user.secondName,
+                      ]
+                        .filter(Boolean)
+                        .join(" ");
+                      const initials =
+                        (
+                          (user.firstName?.[0] ?? "") +
+                          (user.lastName?.[0] ?? "")
+                        ).toUpperCase() || user.email[0].toUpperCase();
+
+                      return (
+                        <tr
+                          key={user.id}
+                          className="hover:bg-slate-200 dark:hover:bg-gray-800 transition-colors"
+                        >
+                          <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-400">
+                            {rowNumber}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-3">
+                              <AvatarCell
+                                userId={user.id}
+                                initials={initials}
+                                hasAvatar={user.hasAvatar ?? false}
+                              />
+                              <div>
+                                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {fullName || "—"}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  {user.email}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {isSuperAdmin(currentUser) && user.id !== currentUser?.id ? (
+                              <select
+                                value={
+                                  (user.roles ?? []).includes("SUPER_ADMIN") ? "SUPER_ADMIN"
+                                  : (user.roles ?? []).includes("ADMIN") ? "ADMIN"
+                                  : "USER"
+                                }
+                                onChange={(e) => void handleChangeRole(user, e.target.value)}
+                                disabled={changingRoleId === user.id}
+                                className={`text-xs font-medium rounded-full px-2.5 py-0.5 border focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 disabled:cursor-wait cursor-pointer ${
+                                  (user.roles ?? []).includes("SUPER_ADMIN")
+                                    ? "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800"
+                                    : (user.roles ?? []).includes("ADMIN")
+                                      ? "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800"
+                                      : "bg-slate-200 text-gray-800 border-slate-300 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600"
+                                }`}
+                              >
+                                <option value="USER">Пользователь</option>
+                                <option value="ADMIN">Админ</option>
+                                <option value="SUPER_ADMIN">Супер админ</option>
+                              </select>
+                            ) : (
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  (user.roles ?? []).includes("SUPER_ADMIN")
+                                    ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                    : (user.roles ?? []).includes("ADMIN")
+                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                      : "bg-slate-200 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
+                                }`}
+                              >
+                                {(user.roles ?? []).includes("SUPER_ADMIN")
+                                  ? "Супер админ"
+                                  : (user.roles ?? []).includes("ADMIN")
+                                    ? "Админ"
+                                    : "Пользователь"}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                              <span
+                                className={`inline-flex w-fit items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  user.isActive
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                    : "bg-slate-200 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
+                                }`}
+                              >
+                                {user.isActive ? "Активен" : "Неактивен"}
+                              </span>
+                              {isSuperAdmin(currentUser) && (
+                                <button
+                                  type="button"
+                                  role="switch"
+                                  aria-checked={user.isActive}
+                                  aria-label={
+                                    user.isActive
+                                      ? "Сделать неактивным"
+                                      : "Сделать активным"
+                                  }
+                                  title={
+                                    user.isActive &&
+                                    ((user.roles ?? []).includes(
+                                      "SUPER_ADMIN",
+                                    ) ||
+                                      (currentUser?.id !== undefined &&
+                                        user.id === currentUser.id))
+                                      ? (user.roles ?? []).includes(
+                                          "SUPER_ADMIN",
+                                        )
+                                        ? "Супер-администратора нельзя деактивировать"
+                                        : "Нельзя деактивировать свою учётную запись"
+                                      : undefined
+                                  }
+                                  disabled={
+                                    togglingActiveId === user.id ||
+                                    (user.isActive &&
+                                      ((user.roles ?? []).includes(
+                                        "SUPER_ADMIN",
+                                      ) ||
+                                        (currentUser?.id !== undefined &&
+                                          user.id === currentUser.id)))
+                                  }
+                                  onClick={() =>
+                                    void handleToggleUserActive(
+                                      user,
+                                      !user.isActive,
+                                    )
+                                  }
+                                  className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:focus:ring-offset-slate-900 disabled:opacity-50 ${
+                                    user.isActive
+                                      ? "bg-green-600"
+                                      : "bg-gray-300 dark:bg-gray-600"
+                                  }`}
+                                >
+                                  <span
+                                    className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                                      user.isActive
+                                        ? "translate-x-6"
+                                        : "translate-x-1"
+                                    }`}
+                                  />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {formatDate(user.registrationDate)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {formatDate(user.lastLoginDate)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            {isAdminOrSuperAdmin(currentUser) && (
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditModal(user)}
+                                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                                  title="Редактировать"
+                                >
+                                  <svg
+                                    className="h-4 w-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                    />
+                                  </svg>
+                                </button>
+                                {isSuperAdmin(currentUser) && (
+                                  <button
+                                    type="button"
+                                    disabled={!canSuperAdminDeleteUser(user)}
+                                    onClick={() =>
+                                      canSuperAdminDeleteUser(user) &&
+                                      openDeleteModal(user)
+                                    }
+                                    className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40"
+                                    title={
+                                      !canSuperAdminDeleteUser(user)
+                                        ? user.id === currentUser?.id
+                                          ? "Нельзя удалить свою учётную запись"
+                                          : userHasSuperAdminRole(user)
+                                            ? "Нельзя удалить супер-администратора"
+                                            : "Удаление недоступно"
+                                        : "Удалить пользователя"
+                                    }
+                                  >
+                                    <svg
+                                      className="h-4 w-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                      />
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
               </table>
             </div>
           </div>

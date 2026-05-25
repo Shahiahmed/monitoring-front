@@ -217,8 +217,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="w-full px-4 py-8 sm:px-6 sm:py-10">
+    <div className="px-6 py-8">
+      <div>
         {/* Заголовок */}
         <div className="mb-10">
           <h1 className="text-h1 text-gray-900 dark:text-white mb-2 tracking-tight">

@@ -6,27 +6,15 @@ import Header from './Header';
 import Footer from './Footer';
 import Sidebar from './Sidebar';
 
-function JustLoggedInCleanup() {
-  useEffect(() => {
-    const t = setTimeout(() => {
-      sessionStorage.removeItem("justLoggedIn");
-    }, 600);
-    return () => clearTimeout(t);
-  }, []);
-  return null;
-}
-
-export default function ConditionalLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const isLoginPage = pathname === '/login' || pathname === '/login/';
-  const [authChecked, setAuthChecked] = useState(false);
+  const isLoginPage = pathname === '/login' || pathname === '/login/'
+    || pathname === '/forgot-password' || pathname === '/forgot-password/';
+  const [authChecked,  setAuthChecked]  = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
 
   useEffect(() => {
     if (isLoginPage) {
@@ -34,18 +22,21 @@ export default function ConditionalLayout({
       return;
     }
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+    const token = localStorage.getItem('authToken');
     if (!token) {
       router.replace('/login');
     } else {
       setIsAuthorized(true);
     }
     setAuthChecked(true);
+
+    if (sessionStorage.getItem('justLoggedIn') === '1') {
+      setJustLoggedIn(true);
+      sessionStorage.removeItem('justLoggedIn');
+    }
   }, [isLoginPage, router]);
 
-  if (isLoginPage) {
-    return <>{children}</>;
-  }
+  if (isLoginPage) return <>{children}</>;
 
   if (!authChecked || !isAuthorized) {
     return (
@@ -55,15 +46,13 @@ export default function ConditionalLayout({
     );
   }
 
-  const justLoggedIn = typeof window !== "undefined" && sessionStorage.getItem("justLoggedIn") === "1";
-
   return (
-    <div className={`flex flex-col flex-1 min-h-screen ${justLoggedIn ? "animate-app-reveal" : ""}`}>
-      <Header />
+    <div className="flex flex-col flex-1 min-h-screen">
+      <Header className={justLoggedIn ? "stagger-header" : ""} />
       <div className="flex flex-1 pt-16">
-        <Sidebar />
+        <Sidebar className={justLoggedIn ? "stagger-sidebar" : ""} />
         <main
-          className="flex-1 min-w-0 transition-all duration-500 ease-in-out p-6 min-h-[calc(100vh-4rem)]"
+          className={`flex-1 min-w-0 transition-all duration-500 ease-in-out min-h-[calc(100vh-4rem)] ${justLoggedIn ? "stagger-main" : ""}`}
           style={{
             marginLeft: "var(--sidebar-width, 16rem)",
             width: "calc(100% - var(--sidebar-width, 16rem))",
@@ -73,9 +62,6 @@ export default function ConditionalLayout({
         </main>
       </div>
       <Footer />
-      {justLoggedIn && (
-        <JustLoggedInCleanup />
-      )}
     </div>
   );
 }

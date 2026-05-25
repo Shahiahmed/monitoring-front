@@ -30,12 +30,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const hasDarkClass = root.classList.contains('dark');
     
     const savedTheme = localStorage.getItem('theme') as Theme | null;
-    
+
     let initialTheme: Theme;
     if (savedTheme) {
       initialTheme = savedTheme;
     } else {
-      initialTheme = 'light';
+      initialTheme = 'dark';
     }
     
     setTheme(initialTheme);
