@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Header from './Header';
 import Footer from './Footer';
 import Sidebar from './Sidebar';
+import AiChatWidget from './AiChatWidget';
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -62,6 +63,7 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
         </main>
       </div>
       <Footer />
+      <AiChatWidget />
     </div>
   );
 }

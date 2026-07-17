@@ -203,7 +203,7 @@ export default function SslPage() {
   const ecpError = ecpFile && !isAllowed(ecpFile, ECP_EXT) ? `Допустимые форматы: ${ECP_EXT.join(", ")}`
     : ecpFile && ecpFile.size > MAX_MB * 1048576 ? `Файл не должен превышать ${MAX_MB} МБ` : "";
 
-  const canSubmitSsl = sslFile && !sslError && sslPassword.trim() && !isLoading;
+  const canSubmitSsl = sslFile && !sslError && !isLoading;
   const canSubmitEcp = ecpFile && !ecpError && !isLoading;
 
   const sslList = certificates.filter(c => c.type === "SSL");
@@ -343,11 +343,11 @@ export default function SslPage() {
               {isSSL && (
                 <div>
                   <label htmlFor="pwd" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                    Пароль к сертификату
+                    Пароль к сертификату <span className="normal-case font-normal text-slate-400">(необязательно)</span>
                   </label>
                   <div className="relative">
                     <input id="pwd" type={showPwd ? "text" : "password"} value={sslPassword}
-                      onChange={e => setSslPassword(e.target.value)} placeholder="Введите пароль"
+                      onChange={e => setSslPassword(e.target.value)} placeholder="Если файл защищён паролем"
                       autoComplete="off"
                       className="block w-full px-3.5 py-2.5 pr-10 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-500 transition" />
                     <button type="button" onClick={() => setShowPwd(v => !v)}
