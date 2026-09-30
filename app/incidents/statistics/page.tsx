@@ -6,25 +6,19 @@ import * as echarts from "echarts";
 import { apiFetch } from "../../lib/api";
 import { datesFromYearQuarter } from "../../lib/incidentPeriodFilters";
 import { useTheme } from "../../components/ThemeProvider";
+import { useLanguage } from "../../components/LanguageProvider";
 
 interface TypeCount  { name: string; count: number; totalMinutes: number; }
 interface MonthCount { month: string; count: number; totalMinutes: number; }
 interface IsAvailability { id: number; nameRu: string; count: number; totalDowntimeMinutes: number; availabilityPercent: number; }
 interface Stats { byType: TypeCount[]; byMonth: MonthCount[]; byIsAvailability?: IsAvailability[]; }
 
-function formatHhMm(minutes: number): string {
+function formatHhMm(minutes: number, minLabel = "мин", hLabel = "ч"): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  if (h === 0) return `${m} мин`;
-  if (m === 0) return `${h} ч`;
-  return `${h} ч ${m} мин`;
-}
-
-const RU_MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
-function formatMonth(yyyyMm: string): string {
-  const [y, m] = yyyyMm.split("-");
-  const idx = parseInt(m, 10) - 1;
-  return `${RU_MONTHS[idx] ?? m} ${y}`;
+  if (h === 0) return `${m} ${minLabel}`;
+  if (m === 0) return `${h} ${hLabel}`;
+  return `${h} ${hLabel} ${m} ${minLabel}`;
 }
 
 function useChartTheme(theme: string) {
@@ -38,7 +32,7 @@ function useChartTheme(theme: string) {
   };
 }
 
-function PieChart({ title, data, theme }: { title: string; data: { name: string; value: number }[]; theme: string }) {
+function PieChart({ title, data, theme, noDataText = "Нет данных" }: { title: string; data: { name: string; value: number }[]; theme: string; noDataText?: string }) {
   const ref  = useRef<HTMLDivElement>(null);
   const inst = useRef<echarts.ECharts | null>(null);
   const t    = useChartTheme(theme);
@@ -49,7 +43,7 @@ function PieChart({ title, data, theme }: { title: string; data: { name: string;
     if (data.length === 0) {
       chart.setOption({ backgroundColor: "transparent",
         title: { text: title, left: "center", top: 4, textStyle: { color: t.text, fontSize: 13, fontWeight: 600 } },
-        series: [], graphic: [{ type: "text", left: "center", top: "middle", style: { text: "Нет данных", fill: t.subText, fontSize: 12 } }],
+        series: [], graphic: [{ type: "text", left: "center", top: "middle", style: { text: noDataText, fill: t.subText, fontSize: 12 } }],
       }); return;
     }
     chart.setOption({ backgroundColor: "transparent",
@@ -59,13 +53,13 @@ function PieChart({ title, data, theme }: { title: string; data: { name: string;
       series: [{ type: "pie", radius: ["35%", "60%"], center: ["60%", "55%"], avoidLabelOverlap: true,
         label: { show: false }, emphasis: { label: { show: true, fontSize: 12, fontWeight: "bold" } }, data }],
     });
-  }, [data, theme, title, t]);
+  }, [data, theme, title, noDataText, t]);
   useEffect(() => { const f = () => inst.current?.resize(); window.addEventListener("resize", f); return () => window.removeEventListener("resize", f); }, []);
   return <div ref={ref} style={{ width: "100%", height: 240 }} />;
 }
 
-function BarChart({ title, categories, values, color, theme, yLabel }: {
-  title: string; categories: string[]; values: number[]; color: string; theme: string; yLabel?: string;
+function BarChart({ title, categories, values, color, theme, yLabel, noDataText = "Нет данных" }: {
+  title: string; categories: string[]; values: number[]; color: string; theme: string; yLabel?: string; noDataText?: string;
 }) {
   const ref  = useRef<HTMLDivElement>(null);
   const inst = useRef<echarts.ECharts | null>(null);
@@ -77,7 +71,7 @@ function BarChart({ title, categories, values, color, theme, yLabel }: {
     if (categories.length === 0) {
       chart.setOption({ backgroundColor: "transparent",
         title: { text: title, left: "center", top: 4, textStyle: { color: t.text, fontSize: 13, fontWeight: 600 } },
-        series: [], graphic: [{ type: "text", left: "center", top: "middle", style: { text: "Нет данных", fill: t.subText, fontSize: 12 } }],
+        series: [], graphic: [{ type: "text", left: "center", top: "middle", style: { text: noDataText, fill: t.subText, fontSize: 12 } }],
       }); return;
     }
     chart.setOption({ backgroundColor: "transparent",
@@ -92,14 +86,14 @@ function BarChart({ title, categories, values, color, theme, yLabel }: {
         label: { show: true, position: "top", formatter: (p: { value: number }) => p.value === 0 ? "" : String(p.value), color: t.subText, fontSize: 10 },
       }],
     });
-  }, [categories, values, color, theme, title, yLabel, t]);
+  }, [categories, values, color, theme, title, yLabel, noDataText, t]);
   useEffect(() => { const f = () => inst.current?.resize(); window.addEventListener("resize", f); return () => window.removeEventListener("resize", f); }, []);
   return <div ref={ref} style={{ width: "100%", height: 260 }} />;
 }
 
-function IsBarChart({ title, names, values, color, theme, labelFormatter }: {
+function IsBarChart({ title, names, values, color, theme, labelFormatter, noDataText = "Нет данных" }: {
   title: string; names: string[]; values: number[]; color: string; theme: string;
-  labelFormatter?: (v: number) => string;
+  labelFormatter?: (v: number) => string; noDataText?: string;
 }) {
   const ref  = useRef<HTMLDivElement>(null);
   const inst = useRef<echarts.ECharts | null>(null);
@@ -111,7 +105,7 @@ function IsBarChart({ title, names, values, color, theme, labelFormatter }: {
     if (names.length === 0) {
       chart.setOption({ backgroundColor: "transparent",
         title: { text: title, left: "center", top: 4, textStyle: { color: t.text, fontSize: 13, fontWeight: 600 } },
-        series: [], graphic: [{ type: "text", left: "center", top: "middle", style: { text: "Нет данных", fill: t.subText, fontSize: 12 } }],
+        series: [], graphic: [{ type: "text", left: "center", top: "middle", style: { text: noDataText, fill: t.subText, fontSize: 12 } }],
       }); return;
     }
     const chartHeight = Math.max(200, names.length * 32 + 60);
@@ -140,19 +134,38 @@ function IsBarChart({ title, names, values, color, theme, labelFormatter }: {
         },
       }],
     });
-  }, [names, values, color, theme, title, labelFormatter, t]);
+  }, [names, values, color, theme, title, labelFormatter, noDataText, t]);
   useEffect(() => { const f = () => inst.current?.resize(); window.addEventListener("resize", f); return () => window.removeEventListener("resize", f); }, []);
   return <div ref={ref} style={{ width: "100%", height: 200 }} />;
 }
 
-function Section({ title, accent, stats, loading, error, theme }: {
-  title: string; accent: string; stats: Stats | null; loading: boolean; error: string | null; theme: string;
+interface SectionLabels {
+  noDataText: string;
+  loadingText: string;
+  byTypeCount: string;
+  byTypeMinutes: string;
+  byMonthCount: string;
+  byMonthMinutes: string;
+  byIsCount: string;
+  byIsDowntime: string;
+  recordsAxis: string;
+  hoursAxis: string;
+  noFailures: string;
+  records: string;
+  hoursDowntime: string;
+  minLabel: string;
+  hLabel: string;
+  months: string[];
+}
+
+function Section({ title, accent, stats, loading, error, theme, labels }: {
+  title: string; accent: string; stats: Stats | null; loading: boolean; error: string | null; theme: string; labels: SectionLabels;
 }) {
   const totalCount = stats?.byType.reduce((s, d) => s + d.count, 0) ?? 0;
   const totalMins  = stats?.byType.reduce((s, d) => s + d.totalMinutes, 0) ?? 0;
   const byTypeCount   = stats?.byType.map(d => ({ name: d.name, value: d.count })) ?? [];
   const byTypeMinutes = stats?.byType.map(d => ({ name: d.name, value: Math.round(d.totalMinutes / 60 * 10) / 10 })) ?? [];
-  const monthLabels   = stats?.byMonth.map(d => formatMonth(d.month)) ?? [];
+  const monthLabels   = stats?.byMonth.map(d => formatMonth(d.month, labels.months)) ?? [];
   const monthCounts   = stats?.byMonth.map(d => d.count) ?? [];
   const monthMinutes  = stats?.byMonth.map(d => Math.round(d.totalMinutes / 60 * 10) / 10) ?? [];
 
@@ -163,13 +176,12 @@ function Section({ title, accent, stats, loading, error, theme }: {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Section header */}
       <div className="flex items-center gap-2">
         <div className="w-1 h-5 rounded-full" style={{ background: accent }} />
         <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 tracking-tight">{title}</h2>
         {!loading && stats && (
           <span className="ml-1 text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-            {totalCount} зап. · {Math.round(totalMins / 60)} ч простоя
+            {totalCount} {labels.records} · {Math.round(totalMins / 60)} {labels.hoursDowntime}
           </span>
         )}
       </div>
@@ -177,7 +189,7 @@ function Section({ title, accent, stats, loading, error, theme }: {
       {loading && (
         <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
           <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-          Загрузка…
+          {labels.loadingText}
         </div>
       )}
       {error && !loading && (
@@ -188,38 +200,40 @@ function Section({ title, accent, stats, loading, error, theme }: {
       {!loading && !error && stats && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <div className="st-panel rounded-2xl p-4">
-            <PieChart title="По типам (кол-во)" data={byTypeCount} theme={theme} />
+            <PieChart title={labels.byTypeCount} data={byTypeCount} theme={theme} noDataText={labels.noDataText} />
           </div>
           <div className="st-panel rounded-2xl p-4">
-            <PieChart title="По типам (ч простоя)" data={byTypeMinutes} theme={theme} />
+            <PieChart title={labels.byTypeMinutes} data={byTypeMinutes} theme={theme} noDataText={labels.noDataText} />
           </div>
           <div className="st-panel rounded-2xl p-4">
-            <BarChart title="По месяцам (кол-во)" categories={monthLabels} values={monthCounts} color={accent} theme={theme} yLabel="записей" />
+            <BarChart title={labels.byMonthCount} categories={monthLabels} values={monthCounts} color={accent} theme={theme} yLabel={labels.recordsAxis} noDataText={labels.noDataText} />
           </div>
           <div className="st-panel rounded-2xl p-4">
-            <BarChart title="По месяцам (ч простоя)" categories={monthLabels} values={monthMinutes} color="#f59e0b" theme={theme} yLabel="часов" />
+            <BarChart title={labels.byMonthMinutes} categories={monthLabels} values={monthMinutes} color="#f59e0b" theme={theme} yLabel={labels.hoursAxis} noDataText={labels.noDataText} />
           </div>
           {isData.length > 0 && (
             <div className="st-panel rounded-2xl p-4">
               <IsBarChart
-                title="По ИС (кол-во сбоев)"
+                title={labels.byIsCount}
                 names={isNames}
                 values={isCounts}
                 color={accent}
                 theme={theme}
-                labelFormatter={(v) => v === 0 ? "нет сбоев" : String(v)}
+                noDataText={labels.noDataText}
+                labelFormatter={(v) => v === 0 ? labels.noFailures : String(v)}
               />
             </div>
           )}
           {isData.length > 0 && (
             <div className="st-panel rounded-2xl p-4">
               <IsBarChart
-                title="По ИС (время простоя)"
+                title={labels.byIsDowntime}
                 names={isNames}
                 values={isDowntime}
                 color="#ef4444"
                 theme={theme}
-                labelFormatter={formatHhMm}
+                noDataText={labels.noDataText}
+                labelFormatter={(v) => formatHhMm(v, labels.minLabel, labels.hLabel)}
               />
             </div>
           )}
@@ -229,16 +243,46 @@ function Section({ title, accent, stats, loading, error, theme }: {
   );
 }
 
-const SECTIONS = [
-  { id: "incident" as const, title: "Инциденты",    endpoint: "incidents/stats",   yearsEndpoint: "incidents/years",   accent: "#3b82f6", adminOnly: false },
-  { id: "works"   as const, title: "Работы",        endpoint: "works/stats",        yearsEndpoint: "works/years",       accent: "#10b981", adminOnly: false },
-  { id: "prtg"   as const, title: "Тревоги PRTG",  endpoint: "prtg-alerts/stats",  yearsEndpoint: "prtg-alerts/years", accent: "#f59e0b", adminOnly: true  },
-];
+function formatMonth(yyyyMm: string, months?: string[]): string {
+  const [y, m] = yyyyMm.split("-");
+  const idx = parseInt(m, 10) - 1;
+  const name = months ? (months[idx] ?? m) : m;
+  return `${name} ${y}`;
+}
 
 type SectionId = "incident" | "works" | "prtg";
 
 export default function IncidentsStatisticsPage() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
+
+  const MONTHS = Array.from({ length: 12 }, (_, i) => t(`statistics.month_${i + 1}`));
+
+  const SECTIONS = [
+    { id: "incident" as SectionId, title: t("statistics.incidents"), endpoint: "incidents/stats",  yearsEndpoint: "incidents/years",   accent: "#3b82f6", adminOnly: false },
+    { id: "works"    as SectionId, title: t("statistics.works"),     endpoint: "works/stats",       yearsEndpoint: "works/years",       accent: "#10b981", adminOnly: false },
+    { id: "prtg"     as SectionId, title: t("statistics.prtg"),      endpoint: "prtg-alerts/stats", yearsEndpoint: "prtg-alerts/years", accent: "#f59e0b", adminOnly: true  },
+  ];
+
+  const sectionLabels: SectionLabels = {
+    noDataText:    t("statistics.noData"),
+    loadingText:   t("statistics.loading"),
+    byTypeCount:   t("statistics.byTypeCount"),
+    byTypeMinutes: t("statistics.byTypeMinutes"),
+    byMonthCount:  t("statistics.byMonthCount"),
+    byMonthMinutes:t("statistics.byMonthMinutes"),
+    byIsCount:     t("statistics.byIsCount"),
+    byIsDowntime:  t("statistics.byIsDowntime"),
+    recordsAxis:   t("statistics.recordsAxis"),
+    hoursAxis:     t("statistics.hoursAxis"),
+    noFailures:    t("statistics.noFailures"),
+    records:       t("statistics.records"),
+    hoursDowntime: t("statistics.hoursDowntime"),
+    minLabel:      t("statistics.min"),
+    hLabel:        t("statistics.h"),
+    months:        MONTHS,
+  };
+
   const [statsMap,   setStatsMap]   = useState<Partial<Record<SectionId, Stats>>>({});
   const [loadingMap, setLoadingMap] = useState<Partial<Record<SectionId, boolean>>>({ incident: true, works: true, prtg: true });
   const [errorMap,   setErrorMap]   = useState<Partial<Record<SectionId, string>>>({});
@@ -276,16 +320,16 @@ export default function IncidentsStatisticsPage() {
         const data: Stats = await res.json();
         setStatsMap(prev => ({ ...prev, [sec.id]: data }));
       } catch {
-        setErrorMap(prev => ({ ...prev, [sec.id]: "Ошибка загрузки" }));
+        setErrorMap(prev => ({ ...prev, [sec.id]: t("statistics.loadError") }));
       } finally {
         setLoadingMap(prev => ({ ...prev, [sec.id]: false }));
       }
     }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
   useEffect(() => { void fetchAll("", ""); }, [fetchAll]);
 
-  /* years — merge from all visible sections */
   useEffect(() => {
     const sections = SECTIONS.filter(s => !s.adminOnly || isAdmin);
     Promise.all(sections.map(s => apiFetch(s.yearsEndpoint).then(r => r.ok ? r.json() : []).catch(() => [])))
@@ -293,6 +337,7 @@ export default function IncidentsStatisticsPage() {
         const merged = Array.from(new Set((results.flat() as number[]).map(Number).filter(Number.isFinite))).sort((a, b) => b - a);
         setYears(merged);
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
   const applyYQ = useCallback((year: string, quarter: string) => {
@@ -320,9 +365,9 @@ export default function IncidentsStatisticsPage() {
             </svg>
           </div>
           <div>
-            <h1 className="text-base font-bold text-gray-900 dark:text-white tracking-tight leading-tight">Статистика событий</h1>
+            <h1 className="text-base font-bold text-gray-900 dark:text-white tracking-tight leading-tight">{t("statistics.title")}</h1>
             <Link href="/incidents/availability" className="mt-0.5 block w-fit text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
-              → Доступность ИС
+              {t("statistics.linkAvailability")}
             </Link>
           </div>
         </div>
@@ -332,7 +377,7 @@ export default function IncidentsStatisticsPage() {
       <div className="jrn-panel rounded-2xl p-5 flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Год</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t("statistics.year")}</span>
             {years.map(y => (
               <button key={y} type="button"
                 onClick={() => applyYQ(selectedYear === String(y) ? "" : String(y), selectedQuarter)}
@@ -341,12 +386,12 @@ export default function IncidentsStatisticsPage() {
               </button>
             ))}
             {selectedYear && (
-              <button type="button" onClick={() => applyYQ("", selectedQuarter)} className="jrn-chip jrn-chip-reset">Все</button>
+              <button type="button" onClick={() => applyYQ("", selectedQuarter)} className="jrn-chip jrn-chip-reset">{t("statistics.all")}</button>
             )}
           </div>
           <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 hidden sm:block" />
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Квартал</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t("statistics.quarter")}</span>
             {[1, 2, 3, 4].map(q => (
               <button key={q} type="button"
                 onClick={() => applyYQ(selectedYear || String(new Date().getFullYear()), selectedQuarter === String(q) ? "" : String(q))}
@@ -355,30 +400,30 @@ export default function IncidentsStatisticsPage() {
               </button>
             ))}
             {selectedQuarter && (
-              <button type="button" onClick={() => applyYQ(selectedYear, "")} className="jrn-chip jrn-chip-reset">Все</button>
+              <button type="button" onClick={() => applyYQ(selectedYear, "")} className="jrn-chip jrn-chip-reset">{t("statistics.all")}</button>
             )}
           </div>
         </div>
         <div className="h-px bg-slate-100 dark:bg-white/5" />
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Дата с</label>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{t("statistics.dateFrom")}</label>
             <input type="date" value={dateFrom} onChange={e => { setSelectedYear(""); setSelectedQuarter(""); setDateFrom(e.target.value); }} className={selectCls} />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Дата по</label>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{t("statistics.dateTo")}</label>
             <input type="date" value={dateTo} onChange={e => { setSelectedYear(""); setSelectedQuarter(""); setDateTo(e.target.value); }} className={selectCls} />
           </div>
           <button type="button" onClick={() => void fetchAll(dateFrom, dateTo)}
             className="jrn-search-btn inline-flex items-center gap-1.5 rounded-lg px-5 py-2 text-xs font-semibold text-white">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            Применить
+            {t("statistics.apply")}
           </button>
           {hasFilter && (
             <button type="button" onClick={reset}
               className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-white/5 transition-colors">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              Сбросить
+              {t("statistics.reset")}
             </button>
           )}
         </div>
@@ -394,6 +439,7 @@ export default function IncidentsStatisticsPage() {
             loading={!!loadingMap[sec.id]}
             error={errorMap[sec.id] ?? null}
             theme={theme}
+            labels={sectionLabels}
           />
         ))}
       </div>

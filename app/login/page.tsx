@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "../components/ThemeToggle";
 import LanguageToggle from "../components/LanguageToggle";
@@ -17,6 +17,139 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [shake, setShake] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const mouse = { x: -9999, y: -9999 };
+    const LINK_DIST = 150;
+    const MOUSE_DIST = 180;
+    const MOUSE_FORCE = 0.018;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const onMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
+    const onLeave = () => { mouse.x = -9999; mouse.y = -9999; };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseleave", onLeave);
+
+    const particles = Array.from({ length: 160 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      r: Math.random() * 1.6 + 0.8,
+    }));
+
+    let animId: number;
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const dark = document.documentElement.classList.contains("dark");
+      const dotColor  = dark ? "rgba(99,140,210," : "rgba(37,99,235,";
+      const lineColor = dark ? "rgba(99,140,210," : "rgba(37,99,235,";
+
+      // Update positions + mouse attraction
+      for (const p of particles) {
+        const mdx = mouse.x - p.x;
+        const mdy = mouse.y - p.y;
+        const md  = Math.sqrt(mdx * mdx + mdy * mdy);
+        if (md < MOUSE_DIST && md > 0) {
+          const force = (1 - md / MOUSE_DIST) * MOUSE_FORCE;
+          p.vx += (mdx / md) * force;
+          p.vy += (mdy / md) * force;
+        }
+        // Friction
+        p.vx *= 0.985;
+        p.vy *= 0.985;
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
+      }
+
+      // Particle–particle lines
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < LINK_DIST) {
+            const alpha = (1 - dist / LINK_DIST) * (dark ? 0.30 : 0.38);
+            ctx.strokeStyle = lineColor + alpha + ")";
+            ctx.lineWidth = 0.9;
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Mouse–particle lines (bright)
+      for (const p of particles) {
+        const mdx = mouse.x - p.x;
+        const mdy = mouse.y - p.y;
+        const md  = Math.sqrt(mdx * mdx + mdy * mdy);
+        if (md < MOUSE_DIST) {
+          const alpha = (1 - md / MOUSE_DIST) * (dark ? 0.65 : 0.70);
+          ctx.strokeStyle = lineColor + alpha + ")";
+          ctx.lineWidth = 1.1;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(mouse.x, mouse.y);
+          ctx.stroke();
+        }
+      }
+
+      // Dots
+      for (const p of particles) {
+        const mdx = mouse.x - p.x;
+        const mdy = mouse.y - p.y;
+        const md  = Math.sqrt(mdx * mdx + mdy * mdy);
+        const nearMouse = md < MOUSE_DIST;
+        const alpha = nearMouse ? (dark ? 0.85 : 0.90) : (dark ? 0.55 : 0.60);
+        const radius = nearMouse ? p.r * 1.6 : p.r;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = dotColor + alpha + ")";
+        ctx.fill();
+      }
+
+      // Cursor dot
+      if (mouse.x > 0) {
+        ctx.beginPath();
+        ctx.arc(mouse.x, mouse.y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = dark ? "rgba(99,140,210,0.80)" : "rgba(37,99,235,0.75)";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(mouse.x, mouse.y, 8, 0, Math.PI * 2);
+        ctx.strokeStyle = dark ? "rgba(99,140,210,0.25)" : "rgba(37,99,235,0.22)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      animId = requestAnimationFrame(draw);
+    };
+    draw();
+
+    return () => {
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseleave", onLeave);
+      cancelAnimationFrame(animId);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,11 +189,14 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden p-4 login-page-bg">
+      {/* ── Particle canvas ── */}
+      <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 z-0" aria-hidden />
+
       {/* ── Animated background ── */}
-      <div className="pointer-events-none absolute inset-0 login-bg-motion" aria-hidden>
-        <div className="absolute -left-[15%] top-[5%] h-[min(600px,90vw)] w-[min(600px,90vw)] rounded-full bg-blue-500/20 blur-3xl dark:bg-blue-600/15 login-orb login-orb-a" />
-        <div className="absolute -right-[10%] bottom-[8%] h-[min(560px,85vw)] w-[min(560px,85vw)] rounded-full bg-cyan-400/18 blur-3xl dark:bg-cyan-500/12 login-orb login-orb-b" />
-        <div className="absolute left-1/2 top-1/3 h-[min(420px,70vw)] w-[min(420px,70vw)] -translate-x-1/2 rounded-full bg-indigo-400/15 blur-3xl dark:bg-violet-500/10 login-orb login-orb-c" />
+      <div className="pointer-events-none absolute inset-0 login-bg-motion z-0" aria-hidden>
+        <div className="absolute -left-[15%] top-[5%] h-[min(650px,90vw)] w-[min(650px,90vw)] rounded-full bg-blue-500/30 blur-3xl dark:bg-blue-600/18 login-orb login-orb-a" />
+        <div className="absolute -right-[10%] bottom-[8%] h-[min(580px,85vw)] w-[min(580px,85vw)] rounded-full bg-cyan-400/25 blur-3xl dark:bg-cyan-500/15 login-orb login-orb-b" />
+        <div className="absolute left-1/2 top-1/3 h-[min(460px,70vw)] w-[min(460px,70vw)] -translate-x-1/2 rounded-full bg-indigo-400/22 blur-3xl dark:bg-violet-500/12 login-orb login-orb-c" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(100,116,139,0.10)_1px,transparent_1px),linear-gradient(to_bottom,rgba(100,116,139,0.10)_1px,transparent_1px)] bg-size-[56px_56px] animate-[login-grid-drift_60s_linear_infinite] dark:bg-[linear-gradient(to_right,rgba(148,163,184,0.07)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.07)_1px,transparent_1px)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_50%_50%,transparent_0%,rgba(248,250,252,0.9)_100%)] dark:bg-[radial-gradient(ellipse_70%_55%_at_50%_50%,transparent_0%,rgba(10,15,30,0.80)_100%)]" />
         <div className="absolute -inset-y-32 -left-[25%] w-[55%] bg-linear-to-r from-transparent via-white/40 to-transparent opacity-50 dark:via-white/10 dark:opacity-30 animate-[login-shimmer_11s_ease-in-out_infinite]" style={{ transform: "rotate(15deg)" }} />
@@ -149,7 +285,7 @@ export default function LoginPage() {
                   }}
                   className="login-input block w-full pl-10 pr-4 py-2.5 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                   placeholder={t("login.emailPlaceholder")}
-                  pattern="[a-zA-Z0-9._%+-]+@enbek\.kz"
+                  pattern="[^\s@]+@enbek\.kz"
                   title={t("login.emailTitle")}
                   required
                 />
@@ -238,7 +374,7 @@ export default function LoginPage() {
 
       <style jsx global>{`
         .login-page-bg {
-          background: linear-gradient(145deg, #f0f7ff 0%, #e8f2fc 40%, #eef4fb 70%, #e2ebf7 100%);
+          background: linear-gradient(145deg, #cddff5 0%, #d4e6f8 35%, #c8daf2 65%, #bfd2ed 100%);
         }
         html.dark .login-page-bg {
           background: linear-gradient(145deg, #020617 0%, #0c1525 40%, #111d32 70%, #0f172a 100%);
@@ -267,19 +403,19 @@ export default function LoginPage() {
 
         /* ─── Form card ─── */
         .login-form-card {
-          background: rgba(255,255,255,0.88);
-          backdrop-filter: blur(24px);
-          -webkit-backdrop-filter: blur(24px);
-          border: 1px solid rgba(148,163,184,0.28);
+          background: rgba(255,255,255,0.95);
+          backdrop-filter: blur(28px);
+          -webkit-backdrop-filter: blur(28px);
+          border: 1px solid rgba(99,140,210,0.30);
           box-shadow:
-            0 4px 6px -1px rgba(37,99,235,0.05),
-            0 20px 50px -10px rgba(37,99,235,0.12),
-            inset 0 0 0 1px rgba(255,255,255,0.6);
+            0 2px 8px rgba(30,64,175,0.08),
+            0 16px 48px rgba(30,64,175,0.16),
+            inset 0 0 0 1px rgba(255,255,255,0.75);
         }
         html.dark .login-form-card {
-          background: rgba(22,32,50,0.75);
+          background: rgba(22,32,50,0.80);
           border: 1px solid rgba(255,255,255,0.07);
-          box-shadow: 0 20px 60px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.03);
+          box-shadow: 0 20px 60px rgba(0,0,0,0.50), inset 0 0 0 1px rgba(255,255,255,0.04);
         }
 
         /* ─── Input fields ─── */
@@ -375,11 +511,7 @@ export default function LoginPage() {
           50%  { opacity: 0.8; transform: scale(2.2); }
         }
 
-        @media (prefers-reduced-motion: reduce) {
-          .login-bg-motion *, .login-bg-motion,
-          .login-orb-a, .login-orb-b, .login-orb-c,
-          .login-enter { animation: none !important; }
-        }
+        /* prefers-reduced-motion intentionally not applied — decorative background */
       `}</style>
     </div>
   );

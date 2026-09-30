@@ -4,8 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import ThemeToggle from "../components/ThemeToggle";
 import { apiFetch } from "../lib/api";
+import { useLanguage } from "../components/LanguageProvider";
 
 export default function ForgotPasswordPage() {
+  const { t } = useLanguage();
   const [email, setEmail]   = useState("");
   const [hint, setHint]     = useState<string | null>(null);
   const [error, setError]   = useState("");
@@ -25,13 +27,13 @@ export default function ForgotPasswordPage() {
       });
       if (!res.ok) {
         const msg = await res.text();
-        setError(msg || "Пользователь не найден");
+        setError(msg || t("forgotPassword.notFound"));
       } else {
         const data: { hint: string } = await res.json();
         setHint(data.hint);
       }
     } catch {
-      setError("Ошибка соединения. Попробуйте ещё раз.");
+      setError(t("forgotPassword.connectionError"));
     } finally {
       setLoading(false);
     }
@@ -58,9 +60,9 @@ export default function ForgotPasswordPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Забыли пароль?</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">{t("forgotPassword.title")}</h1>
           <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
-            Введите email — мы покажем подсказку к паролю
+            {t("forgotPassword.subtitle")}
           </p>
         </div>
 
@@ -79,11 +81,11 @@ export default function ForgotPasswordPage() {
             {/* Hint result */}
             {hint !== null && (
               <div className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-blue-500 dark:text-blue-400 mb-1.5">Подсказка к паролю</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-blue-500 dark:text-blue-400 mb-1.5">{t("forgotPassword.hintLabel")}</p>
                 {hint ? (
                   <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">{hint}</p>
                 ) : (
-                  <p className="text-sm text-gray-400 dark:text-gray-500 italic">Подсказка не задана. Обратитесь к администратору.</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 italic">{t("forgotPassword.hintEmpty")}</p>
                 )}
               </div>
             )}
@@ -129,11 +131,11 @@ export default function ForgotPasswordPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    Поиск…
+                    {t("forgotPassword.searching")}
                   </>
                 ) : (
                   <>
-                    Показать подсказку
+                    {t("forgotPassword.showHint")}
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
@@ -145,7 +147,7 @@ export default function ForgotPasswordPage() {
 
           <div className="mt-5 text-center">
             <Link href="/login" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-              ← Вернуться ко входу
+              {t("forgotPassword.backToLogin")}
             </Link>
           </div>
         </div>

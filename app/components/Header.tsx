@@ -49,7 +49,7 @@ export default function Header({ className = "" }: { className?: string }) {
     <header className={`glass fixed top-0 left-0 right-0 z-50 h-16 border-b border-white/40 dark:border-white/10 ${className}`}>
       <div className="w-full px-4 h-full flex items-center">
         <div className="flex items-center justify-between w-full">
-          <Link href="/" className="flex items-center space-x-2 hover:opacity-90 transition-opacity">
+          <Link href="/" data-tour="header-brand" className="flex items-center space-x-2 hover:opacity-90 transition-opacity">
             <svg
               width={43}
               height={43}
@@ -57,7 +57,7 @@ export default function Header({ className = "" }: { className?: string }) {
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
               shapeRendering="geometricPrecision"
-              className="text-slate-900 dark:text-white"
+              className="text-white"
               style={
                 {
                   "--accent": "#2563EB",
@@ -116,7 +116,7 @@ export default function Header({ className = "" }: { className?: string }) {
 
           <div className="flex items-center space-x-6">
             {(sslSummary !== null || ecpSummary !== null) && (
-              <div className="flex items-center space-x-4">
+              <div data-tour="cert-badges" className="flex items-center space-x-4">
                 {ecpSummary !== null && (
                   <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                     <svg
@@ -160,7 +160,7 @@ export default function Header({ className = "" }: { className?: string }) {
               </div>
             )}
 
-            <nav className="flex items-center space-x-4">
+            <nav data-tour="header-tools" className="flex items-center space-x-4">
               <LanguageToggle />
               <ThemeToggle />
               <Link

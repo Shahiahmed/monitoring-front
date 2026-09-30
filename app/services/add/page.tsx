@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "../../lib/api";
+import { useLanguage } from "../../components/LanguageProvider";
 
 interface DicItem { id: number; nameRu: string; }
 interface DicServer { id: number; name: string; ip: string; }
@@ -25,6 +26,7 @@ const EMPTY_FORM = {
 const EMPTY_DEP = { envId: "" as string | number, serverId: "" as string | number, info: "", innerUrl: "", url: "", precedent: "" };
 
 function AddServiceContent() {
+  const { t } = useLanguage();
   const router = useRouter();
   const params = useSearchParams();
   const editId = params.get("id");
@@ -101,7 +103,7 @@ function AddServiceContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.artifactId.trim()) { setError("Название и Artifact ID обязательны"); return; }
+    if (!form.name.trim() || !form.artifactId.trim()) { setError(t("services.nameRequired")); return; }
     setSaving(true); setError(null);
     try {
       const body = {
@@ -129,11 +131,11 @@ function AddServiceContent() {
   const closeDepModal = () => setDepModal({ open: false, editDep: null });
 
   const handleDepSave = async () => {
-    if (!depForm.envId || !depForm.serverId) { setDepError("Выберите окружение и сервер"); return; }
+    if (!depForm.envId || !depForm.serverId) { setDepError(t("services.selectEnvAndServer")); return; }
     setDepSaving(true); setDepError(null);
     try {
       const appId = editId ? Number(editId) : null;
-      if (!appId) { setDepError("Сначала сохраните сервис"); setDepSaving(false); return; }
+      if (!appId) { setDepError(t("services.selectFirst")); setDepSaving(false); return; }
       const body = { applicationId: appId, envId: Number(depForm.envId), serverId: Number(depForm.serverId), info: depForm.info, innerUrl: depForm.innerUrl, url: depForm.url, precedent: depForm.precedent };
       const { editDep } = depModal;
       const res = editDep
@@ -148,15 +150,15 @@ function AddServiceContent() {
   };
 
   const handleDepDelete = async (d: Deployment) => {
-    if (!confirm(`Удалить развёртывание на ${d.serverIp}?`)) return;
+    if (!confirm(t("services.deleteDeploymentConfirm") + " " + d.serverIp + "?")) return;
     try {
       const res = await apiFetch(`applications/deployments/${d.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(await res.text());
       setDeployments(prev => prev.filter(x => x.id !== d.id));
-    } catch (e: any) { alert("Ошибка: " + e.message); }
+    } catch (e: any) { alert(t("common.error") + ": " + e.message); }
   };
 
-  if (loadingApp) return <div className="flex items-center justify-center h-64 text-slate-400 text-sm">Загрузка…</div>;
+  if (loadingApp) return <div className="flex items-center justify-center h-64 text-slate-400 text-sm">{t("common.loading2")}</div>;
 
   return (
     <div className="px-4 py-6 sm:px-6">
@@ -169,10 +171,10 @@ function AddServiceContent() {
         </button>
         <div>
           <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
-            {editId ? "Редактирование сервиса" : "Добавить сервис"}
+            {editId ? t("services.editTitle") : t("services.addTitle")}
           </h1>
           <p className="text-[12px] text-slate-400 mt-0.5">
-            {editId ? `Редактирование #${editId}` : "Новая запись в реестре"}
+            {editId ? `${t("services.editTitle")} #${editId}` : t("services.newRecord")}
           </p>
         </div>
       </div>
@@ -183,61 +185,61 @@ function AddServiceContent() {
 
       <form onSubmit={handleSubmit}>
         <div className="add-card mb-5">
-          <div className="add-card-title">Основные сведения</div>
+          <div className="add-card-title">{t("services.basicInfo")}</div>
           <div className="add-grid">
             <Field label="Artifact ID *">
               <input className="add-input" value={form.artifactId} onChange={e => handleChange("artifactId", e.target.value)} placeholder="ru.enbek.gcvp-backend" />
             </Field>
-            <Field label="Название *">
-              <input className="add-input" value={form.name} onChange={e => handleChange("name", e.target.value)} placeholder="Название сервиса" />
+            <Field label={`${t("common.name")} *`}>
+              <input className="add-input" value={form.name} onChange={e => handleChange("name", e.target.value)} placeholder={t("services.serviceNamePlaceholder")} />
             </Field>
-            <Field label="Проект">
-              <input className="add-input" value={form.projectName} onChange={e => handleChange("projectName", e.target.value)} placeholder="Название проекта" />
+            <Field label={t("services.project")}>
+              <input className="add-input" value={form.projectName} onChange={e => handleChange("projectName", e.target.value)} placeholder={t("services.projectNamePlaceholder")} />
             </Field>
             <Field label="SHEP Service ID">
-              <input className="add-input" value={form.shepServiceId} onChange={e => handleChange("shepServiceId", e.target.value)} placeholder="ID в SHEP" />
+              <input className="add-input" value={form.shepServiceId} onChange={e => handleChange("shepServiceId", e.target.value)} placeholder={t("services.shepIdPlaceholder")} />
             </Field>
-            <Field label="Тип приложения">
+            <Field label={t("services.appType")}>
               <select className="add-select" value={form.appTypeId} onChange={e => handleChange("appTypeId", e.target.value)}>
-                <option value="">— не выбрано —</option>
-                {appTypes.map(t => <option key={t.id} value={t.id}>{t.nameRu}</option>)}
+                <option value="">{t("services.notSelected")}</option>
+                {appTypes.map(tp => <option key={tp.id} value={tp.id}>{tp.nameRu}</option>)}
               </select>
             </Field>
-            <Field label="Тип взаимодействия">
+            <Field label={t("services.interactionType")}>
               <select className="add-select" value={form.interactionTypeId} onChange={e => handleChange("interactionTypeId", e.target.value)}>
-                <option value="">— не выбрано —</option>
-                {interactionTypes.map(t => <option key={t.id} value={t.id}>{t.nameRu}</option>)}
+                <option value="">{t("services.notSelected")}</option>
+                {interactionTypes.map(tp => <option key={tp.id} value={tp.id}>{tp.nameRu}</option>)}
               </select>
             </Field>
-            <Field label="Потребитель сервиса">
-              <input className="add-input" value={form.subsystemInout} onChange={e => handleChange("subsystemInout", e.target.value)} placeholder="Какая система использует этот сервис" />
+            <Field label={t("services.consumer")}>
+              <input className="add-input" value={form.subsystemInout} onChange={e => handleChange("subsystemInout", e.target.value)} placeholder={t("services.consumerPlaceholder")} />
             </Field>
-            <Field label="Страница SmartBridge">
+            <Field label={t("services.smartBridge")}>
               <input className="add-input" value={form.smartBridgePage} onChange={e => handleChange("smartBridgePage", e.target.value)} placeholder="https://…" />
             </Field>
-            <Field label="URL (продакшн)">
+            <Field label={t("services.urlProd")}>
               <input className="add-input" value={form.urlProduction} onChange={e => handleChange("urlProduction", e.target.value)} placeholder="https://…" />
             </Field>
-            <Field label="URL (тест)">
+            <Field label={t("services.urlTest")}>
               <input className="add-input" value={form.urlTest} onChange={e => handleChange("urlTest", e.target.value)} placeholder="https://…" />
             </Field>
-            <Field label="Схема БД">
+            <Field label={t("services.schemaDb")}>
               <input className="add-input" value={form.schemaDatabase} onChange={e => handleChange("schemaDatabase", e.target.value)} placeholder="public" />
             </Field>
             <Field label="">
               <label className="flex items-center gap-2 mt-5 cursor-pointer select-none">
                 <input type="checkbox" className="h-4 w-4 accent-blue-600" checked={form.featured} onChange={e => handleChange("featured", e.target.checked)} />
-                <span className="text-xs text-slate-600 dark:text-slate-300">Рекомендованный (featured)</span>
+                <span className="text-xs text-slate-600 dark:text-slate-300">{t("services.featured")}</span>
               </label>
             </Field>
           </div>
 
           <div className="add-grid-full mt-4">
-            <Field label="Описание">
-              <textarea className="add-input resize-none h-20" value={form.description} onChange={e => handleChange("description", e.target.value)} placeholder="Краткое описание сервиса…" />
+            <Field label={t("common.description")}>
+              <textarea className="add-input resize-none h-20" value={form.description} onChange={e => handleChange("description", e.target.value)} placeholder={t("services.descriptionPlaceholder")} />
             </Field>
-            <Field label="Процедуры">
-              <textarea className="add-input resize-none h-20" value={form.procedures} onChange={e => handleChange("procedures", e.target.value)} placeholder="Описание процедур…" />
+            <Field label={t("services.procedures")}>
+              <textarea className="add-input resize-none h-20" value={form.procedures} onChange={e => handleChange("procedures", e.target.value)} placeholder={t("services.proceduresPlaceholder")} />
             </Field>
           </div>
         </div>
@@ -246,25 +248,25 @@ function AddServiceContent() {
         {editId && (
           <div className="add-card mb-5">
             <div className="flex items-center justify-between mb-3">
-              <div className="add-card-title mb-0">Развёртывания</div>
+              <div className="add-card-title mb-0">{t("services.deploymentsSection")}</div>
               <button type="button" onClick={openDepAdd} className="add-dep-add-btn">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                 </svg>
-                Добавить
+                {t("common.add")}
               </button>
             </div>
             {deployments.length === 0 ? (
-              <p className="text-xs text-slate-400 py-4 text-center">Нет развёртываний</p>
+              <p className="text-xs text-slate-400 py-4 text-center">{t("services.noDeploymentsList")}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="add-dep-thead">
-                      <th className="text-left px-3 py-2">Окружение</th>
-                      <th className="text-left px-3 py-2">Сервер (IP)</th>
+                      <th className="text-left px-3 py-2">{t("services.envCol")}</th>
+                      <th className="text-left px-3 py-2">{t("services.serverIp")}</th>
                       <th className="text-left px-3 py-2">Info</th>
-                      <th className="text-left px-3 py-2">URL (внутр.)</th>
+                      <th className="text-left px-3 py-2">{t("services.innerUrlCol")}</th>
                       <th className="px-3 py-2"></th>
                     </tr>
                   </thead>
@@ -281,12 +283,12 @@ function AddServiceContent() {
                         <td className="px-3 py-2 text-slate-500 dark:text-slate-400 max-w-48 truncate">{d.innerUrl || "—"}</td>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-1.5">
-                            <button type="button" onClick={() => openDepEdit(d)} className="add-dep-edit-btn" title="Редактировать">
+                            <button type="button" onClick={() => openDepEdit(d)} className="add-dep-edit-btn" title={t("common.edit")}>
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                             </button>
-                            <button type="button" onClick={() => handleDepDelete(d)} className="add-dep-del-btn" title="Удалить">
+                            <button type="button" onClick={() => handleDepDelete(d)} className="add-dep-del-btn" title={t("common.delete")}>
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
@@ -304,14 +306,14 @@ function AddServiceContent() {
 
         {!editId && (
           <div className="mb-5 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-4 py-3 text-amber-700 dark:text-amber-400 text-xs">
-            Развёртывания можно добавить после сохранения сервиса.
+            {t("services.deployAfterSave")}
           </div>
         )}
 
         <div className="flex items-center justify-end gap-3">
-          <button type="button" onClick={() => router.back()} className="add-cancel-btn">Отмена</button>
+          <button type="button" onClick={() => router.back()} className="add-cancel-btn">{t("common.cancel")}</button>
           <button type="submit" disabled={saving} className="add-save-btn">
-            {saving ? "Сохранение…" : editId ? "Сохранить изменения" : "Создать сервис"}
+            {saving ? t("services.saving") : editId ? t("services.saveChanges") : t("services.createService")}
           </button>
         </div>
       </form>
@@ -322,7 +324,7 @@ function AddServiceContent() {
           <div className="add-modal" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                {depModal.editDep ? "Редактировать развёртывание" : "Добавить развёртывание"}
+                {depModal.editDep ? t("services.editDeployment") : t("services.addDeployment")}
               </h3>
               <button onClick={closeDepModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -334,36 +336,36 @@ function AddServiceContent() {
             {depError && <div className="mb-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 px-3 py-2 text-red-600 dark:text-red-400 text-xs">{depError}</div>}
 
             <div className="space-y-3">
-              <Field label="Окружение *">
+              <Field label={`${t("services.envCol")} *`}>
                 <select className="add-select" value={depForm.envId} onChange={e => setDepForm(f => ({ ...f, envId: e.target.value }))}>
-                  <option value="">— выберите —</option>
+                  <option value="">{t("common.selectPlaceholder")}</option>
                   {envs.map(e => <option key={e.id} value={e.id}>{e.nameRu}</option>)}
                 </select>
               </Field>
-              <Field label="Сервер *">
+              <Field label={`${t("services.serverCol")} *`}>
                 <select className="add-select" value={depForm.serverId} onChange={e => setDepForm(f => ({ ...f, serverId: e.target.value }))}>
-                  <option value="">— выберите —</option>
+                  <option value="">{t("common.selectPlaceholder")}</option>
                   {servers.map(s => <option key={s.id} value={s.id}>{s.name} ({s.ip})</option>)}
                 </select>
               </Field>
               <Field label="Info">
-                <input className="add-input" value={depForm.info} onChange={e => setDepForm(f => ({ ...f, info: e.target.value }))} placeholder="Примечание" />
+                <input className="add-input" value={depForm.info} onChange={e => setDepForm(f => ({ ...f, info: e.target.value }))} placeholder={t("services.infoNote")} />
               </Field>
-              <Field label="URL (внутренний)">
+              <Field label={t("services.innerUrl")}>
                 <input className="add-input" value={depForm.innerUrl} onChange={e => setDepForm(f => ({ ...f, innerUrl: e.target.value }))} placeholder="http://192.168.x.x:8080" />
               </Field>
-              <Field label="URL (внешний)">
+              <Field label={t("services.outerUrl")}>
                 <input className="add-input" value={depForm.url} onChange={e => setDepForm(f => ({ ...f, url: e.target.value }))} placeholder="https://…" />
               </Field>
-              <Field label="Прецедент">
-                <input className="add-input" value={depForm.precedent} onChange={e => setDepForm(f => ({ ...f, precedent: e.target.value }))} placeholder="Номер прецедента" />
+              <Field label={t("services.precedent")}>
+                <input className="add-input" value={depForm.precedent} onChange={e => setDepForm(f => ({ ...f, precedent: e.target.value }))} placeholder={t("services.precedentPlaceholder")} />
               </Field>
             </div>
 
             <div className="flex justify-end gap-2 mt-5">
-              <button onClick={closeDepModal} className="add-cancel-btn">Отмена</button>
+              <button onClick={closeDepModal} className="add-cancel-btn">{t("common.cancel")}</button>
               <button onClick={handleDepSave} disabled={depSaving} className="add-save-btn">
-                {depSaving ? "Сохранение…" : "Сохранить"}
+                {depSaving ? t("services.saving") : t("common.save")}
               </button>
             </div>
           </div>
@@ -505,8 +507,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export default function AddServicePage() {
+  const { t } = useLanguage();
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-64 text-slate-400 text-sm">Загрузка…</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-64 text-slate-400 text-sm">{t("common.loading2")}</div>}>
       <AddServiceContent />
     </Suspense>
   );

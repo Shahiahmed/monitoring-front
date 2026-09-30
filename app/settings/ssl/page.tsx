@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { apiFetch } from "@/app/lib/api";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 const SSL_EXT = [".p12", ".pfx", ".cer", ".crt", ".pem"];
 const ECP_EXT = [".p12", ".pfx", ".key", ".cer", ".crt", ".pem"];
@@ -37,9 +38,10 @@ function issuerCN(s: string | null) {
   return m ? m[1].trim() : s;
 }
 
-function DropZone({ accept, file, onFile, onClear, error, inputRef, disabled }: {
+function DropZone({ accept, file, onFile, onClear, error, inputRef, disabled, t }: {
   accept: string[]; file: File | null; onFile: (f: File) => void; onClear: () => void;
   error: string; inputRef: React.RefObject<HTMLInputElement | null>; disabled?: boolean;
+  t: (k: string) => string;
 }) {
   const [drag, setDrag] = useState(false);
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -81,9 +83,9 @@ function DropZone({ accept, file, onFile, onClear, error, inputRef, disabled }: 
               </svg>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Перетащите файл или <span className="text-blue-600 dark:text-blue-400 font-medium">выберите</span>
+              {t("certificates.dropText")} <span className="text-blue-600 dark:text-blue-400 font-medium">{t("certificates.choose")}</span>
             </p>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500">{accept.join(" · ")} · до {MAX_MB} МБ</p>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">{accept.join(" · ")} · {t("certificates.upTo")} {MAX_MB} МБ</p>
           </>
         )}
       </div>
@@ -100,7 +102,7 @@ function DropZone({ accept, file, onFile, onClear, error, inputRef, disabled }: 
   );
 }
 
-function CertCard({ cert, onDelete }: { cert: Certificate; onDelete: () => void }) {
+function CertCard({ cert, onDelete, t }: { cert: Certificate; onDelete: () => void; t: (k: string) => string }) {
   const d = daysLeft(cert.validTo);
   const isSsl   = cert.type === "SSL";
   const expired = d !== null && d < 0;
@@ -124,7 +126,7 @@ function CertCard({ cert, onDelete }: { cert: Certificate; onDelete: () => void 
                 expired ? "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400" :
                 warning ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400" :
                           "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"}`}>
-                {expired ? "Истёк" : warning ? `⚠ ${d} дн.` : `${d} дн.`}
+                {expired ? t("certificates.expired") : warning ? `⚠ ${d} ${t("servers.days")}` : `${d} ${t("servers.days")}`}
               </span>
             )}
           </div>
@@ -137,14 +139,14 @@ function CertCard({ cert, onDelete }: { cert: Certificate; onDelete: () => void 
         </div>
 
         <div className="space-y-2">
-          <Row label="Владелец" value={issuerCN(cert.certIssuer)} bold />
-          {cert.certSubject && <Row label="Субъект" value={cert.certSubject} truncate />}
+          <Row label={t("certificates.owner")} value={issuerCN(cert.certIssuer)} bold />
+          {cert.certSubject && <Row label={t("certificates.subject")} value={cert.certSubject} truncate />}
           <div className="grid grid-cols-2 gap-2">
-            <Row label="Действует с" value={formatDate(cert.validFrom)} />
-            <Row label="До" value={formatDate(cert.validTo)} highlight={expired ? "red" : warning ? "amber" : undefined} />
+            <Row label={t("certificates.validFrom")} value={formatDate(cert.validFrom)} />
+            <Row label={t("certificates.validUntil")} value={formatDate(cert.validTo)} highlight={expired ? "red" : warning ? "amber" : undefined} />
           </div>
-          <Row label="Загружен" value={formatDateTime(cert.createdAt)} muted />
-          {cert.certOriginalName && <Row label="Файл" value={cert.certOriginalName} muted truncate />}
+          <Row label={t("certificates.uploaded")} value={formatDateTime(cert.createdAt)} muted />
+          {cert.certOriginalName && <Row label={t("certificates.fileCol")} value={cert.certOriginalName} muted truncate />}
         </div>
       </div>
     </div>
@@ -168,7 +170,7 @@ function Row({ label, value, bold, muted, truncate, highlight }: {
   );
 }
 
-function EmptyState({ type }: { type: string }) {
+function EmptyState({ type, t }: { type: string; t: (k: string) => string }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
@@ -176,13 +178,14 @@ function EmptyState({ type }: { type: string }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
         </svg>
       </div>
-      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Нет сертификатов {type}</p>
-      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Загрузите файл через форму слева</p>
+      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t("certificates.noCerts")} {type}</p>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t("certificates.uploadViaForm")}</p>
     </div>
   );
 }
 
 export default function SslPage() {
+  const { t } = useLanguage();
   const [activeTab,    setActiveTab]    = useState<TabId>("ssl");
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loadingList,  setLoadingList]  = useState(true);
@@ -198,10 +201,10 @@ export default function SslPage() {
   const sslInputRef = useRef<HTMLInputElement>(null);
   const ecpInputRef = useRef<HTMLInputElement>(null);
 
-  const sslError = sslFile && !isAllowed(sslFile, SSL_EXT) ? `Допустимые форматы: ${SSL_EXT.join(", ")}`
-    : sslFile && sslFile.size > MAX_MB * 1048576 ? `Файл не должен превышать ${MAX_MB} МБ` : "";
-  const ecpError = ecpFile && !isAllowed(ecpFile, ECP_EXT) ? `Допустимые форматы: ${ECP_EXT.join(", ")}`
-    : ecpFile && ecpFile.size > MAX_MB * 1048576 ? `Файл не должен превышать ${MAX_MB} МБ` : "";
+  const sslError = sslFile && !isAllowed(sslFile, SSL_EXT) ? `${t("certificates.allowedFormats")} ${SSL_EXT.join(", ")}`
+    : sslFile && sslFile.size > MAX_MB * 1048576 ? `${t("certificates.upTo")} ${MAX_MB} МБ` : "";
+  const ecpError = ecpFile && !isAllowed(ecpFile, ECP_EXT) ? `${t("certificates.allowedFormats")} ${ECP_EXT.join(", ")}`
+    : ecpFile && ecpFile.size > MAX_MB * 1048576 ? `${t("certificates.upTo")} ${MAX_MB} МБ` : "";
 
   const canSubmitSsl = sslFile && !sslError && !isLoading;
   const canSubmitEcp = ecpFile && !ecpError && !isLoading;
@@ -226,11 +229,11 @@ export default function SslPage() {
       const r = await apiFetch(`settings/certificates/${deleteTarget.id}`, { method: "DELETE" });
       if (r.ok) {
         setCertificates(p => p.filter(c => c.id !== deleteTarget.id));
-        setSuccess("Сертификат удалён."); setTimeout(() => setSuccess(""), 3000);
+        setSuccess(t("certificates.certDeleted")); setTimeout(() => setSuccess(""), 3000);
         window.dispatchEvent(new Event("certificates-updated"));
         setDeleteTarget(null);
-      } else setError("Не удалось удалить сертификат");
-    } catch { setError("Не удалось удалить сертификат"); }
+      } else setError(t("certificates.errorDelete"));
+    } catch { setError(t("certificates.errorDelete")); }
     finally { setIsDeleting(false); }
   }
 
@@ -241,12 +244,12 @@ export default function SslPage() {
     try {
       const fd = new FormData(); fd.append("file", sslFile!); fd.append("password", sslPassword);
       const r = await apiFetch("settings/certificates/ssl", { method: "POST", body: fd });
-      if (!r.ok) throw new Error((await r.text()) || "Ошибка при сохранении SSL");
+      if (!r.ok) throw new Error((await r.text()) || t("certificates.errorSaveSsl"));
       const newCert = await r.json();
       setCertificates(p => [newCert, ...p]);
-      setSuccess("SSL-сертификат сохранён."); clearSsl();
+      setSuccess(t("certificates.sslSaved")); clearSsl();
       window.dispatchEvent(new Event("certificates-updated"));
-    } catch (err) { setError(err instanceof Error ? err.message : "Ошибка при сохранении"); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("certificates.errorSaveSsl")); }
     finally { setIsLoading(false); }
   }
 
@@ -257,12 +260,12 @@ export default function SslPage() {
     try {
       const fd = new FormData(); fd.append("file", ecpFile!);
       const r = await apiFetch("settings/certificates/ecp", { method: "POST", body: fd });
-      if (!r.ok) throw new Error((await r.text()) || "Ошибка при сохранении ЭЦП");
+      if (!r.ok) throw new Error((await r.text()) || t("certificates.errorSaveEcp"));
       const newCert = await r.json();
       setCertificates(p => [newCert, ...p]);
-      setSuccess("ЭЦП-сертификат сохранён."); clearEcp();
+      setSuccess(t("certificates.ecpSaved")); clearEcp();
       window.dispatchEvent(new Event("certificates-updated"));
-    } catch (err) { setError(err instanceof Error ? err.message : "Ошибка при сохранении"); }
+    } catch (err) { setError(err instanceof Error ? err.message : t("certificates.errorSaveEcp")); }
     finally { setIsLoading(false); }
   }
 
@@ -280,28 +283,28 @@ export default function SslPage() {
           </svg>
         </div>
         <div>
-          <h1 className="text-base font-bold text-gray-900 dark:text-white tracking-tight leading-tight">ЭЦП и SSL</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Хранятся только метаданные сертификата, файл не сохраняется</p>
+          <h1 className="text-base font-bold text-gray-900 dark:text-white tracking-tight leading-tight">{t("nav.ssl")}</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t("certificates.subtitle")}</p>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/60 w-fit">
-        {(["ssl", "ecp"] as TabId[]).map(t => (
-          <button key={t} type="button"
-            onClick={() => { setActiveTab(t); setError(""); setSuccess(""); }}
+        {(["ssl", "ecp"] as TabId[]).map(tab => (
+          <button key={tab} type="button"
+            onClick={() => { setActiveTab(tab); setError(""); setSuccess(""); }}
             className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-150 ${
-              activeTab === t
+              activeTab === tab
                 ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
                 : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"}`}>
-            {t === "ssl"
+            {tab === "ssl"
               ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
               : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>}
-            {t === "ssl" ? "SSL" : "ЭЦП"}
-            {(t === "ssl" ? sslList : ecpList).length > 0 && (
+            {tab === "ssl" ? "SSL" : "ЭЦП"}
+            {(tab === "ssl" ? sslList : ecpList).length > 0 && (
               <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold ${
-                activeTab === t ? (t === "ssl" ? "bg-emerald-500 text-white" : "bg-blue-500 text-white") : "bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-300"}`}>
-                {(t === "ssl" ? sslList : ecpList).length}
+                activeTab === tab ? (tab === "ssl" ? "bg-emerald-500 text-white" : "bg-blue-500 text-white") : "bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-300"}`}>
+                {(tab === "ssl" ? sslList : ecpList).length}
               </span>
             )}
           </button>
@@ -315,7 +318,7 @@ export default function SslPage() {
           <div className="flex items-center gap-2">
             <div className={`w-1.5 h-5 rounded-full ${isSSL ? "bg-emerald-500" : "bg-blue-500"}`} />
             <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-              {isSSL ? "Загрузить SSL-сертификат" : "Загрузить ЭЦП"}
+              {isSSL ? t("certificates.uploadSsl") : t("certificates.uploadEcp")}
             </h2>
           </div>
 
@@ -325,7 +328,7 @@ export default function SslPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
               </svg>
               <p className="text-xs text-amber-800 dark:text-amber-300">
-                Сертификат уже загружен. Удалите текущий справа, чтобы загрузить новый.
+                {t("certificates.alreadyLoaded")}
               </p>
             </div>
           ) : (
@@ -338,16 +341,17 @@ export default function SslPage() {
                 error={isSSL ? sslError : ecpError}
                 inputRef={isSSL ? sslInputRef : ecpInputRef}
                 disabled={isLoading}
+                t={t}
               />
 
               {isSSL && (
                 <div>
                   <label htmlFor="pwd" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                    Пароль к сертификату <span className="normal-case font-normal text-slate-400">(необязательно)</span>
+                    {t("certificates.passwordLabel")} <span className="normal-case font-normal text-slate-400">({t("certificates.passwordOptional")})</span>
                   </label>
                   <div className="relative">
                     <input id="pwd" type={showPwd ? "text" : "password"} value={sslPassword}
-                      onChange={e => setSslPassword(e.target.value)} placeholder="Если файл защищён паролем"
+                      onChange={e => setSslPassword(e.target.value)} placeholder={t("certificates.passwordPlaceholder")}
                       autoComplete="off"
                       className="block w-full px-3.5 py-2.5 pr-10 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-500 transition" />
                     <button type="button" onClick={() => setShowPwd(v => !v)}
@@ -367,15 +371,15 @@ export default function SslPage() {
                           : "bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-blue-200 dark:shadow-blue-900/40"
                   } shadow-md disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none`}>
                   {isLoading
-                    ? <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Сохранение…</>
+                    ? <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>{t("certificates.saving")}</>
                     : <>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                        Сохранить {isSSL ? "SSL" : "ЭЦП"}
+                        {isSSL ? t("certificates.saveSsl") : t("certificates.saveEcp")}
                       </>}
                 </button>
                 <button type="button" onClick={isSSL ? clearSsl : clearEcp}
                   className="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                  Сбросить
+                  {t("certificates.reset")}
                 </button>
               </div>
             </form>
@@ -402,30 +406,29 @@ export default function SslPage() {
             <div className="flex items-center gap-2">
               <div className={`w-1.5 h-5 rounded-full ${isSSL ? "bg-emerald-500" : "bg-blue-500"}`} />
               <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                {isSSL ? "SSL сертификаты" : "ЭЦП сертификаты"}
+                {isSSL ? t("certificates.sslCerts") : t("certificates.ecpCerts")}
               </h2>
             </div>
             {activeList.length > 0 && (
-              <span className="text-xs text-slate-400">{activeList.length} шт.</span>
+              <span className="text-xs text-slate-400">{activeList.length} {t("certificates.pieces")}</span>
             )}
           </div>
 
           {loadingList ? (
             <div className="flex items-center gap-2 py-6 justify-center text-slate-400 text-sm">
               <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              Загрузка…
+              {t("certificates.loading")}
             </div>
           ) : activeList.length === 0 ? (
-            <EmptyState type={isSSL ? "SSL" : "ЭЦП"} />
+            <EmptyState type={isSSL ? "SSL" : "ЭЦП"} t={t} />
           ) : (
             <div className="flex flex-col gap-3">
-              {activeList.map(c => <CertCard key={c.id} cert={c} onDelete={() => setDeleteTarget(c)} />)}
+              {activeList.map(c => <CertCard key={c.id} cert={c} onDelete={() => setDeleteTarget(c)} t={t} />)}
             </div>
           )}
         </div>
       </div>
 
-      {/* Модалка подтверждения удаления */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !isDeleting && setDeleteTarget(null)} />
@@ -437,11 +440,11 @@ export default function SslPage() {
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">Удалить сертификат?</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{t("certificates.deleteCert")}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {deleteTarget.keyOriginalName ?? deleteTarget.certOriginalName ?? `Сертификат #${deleteTarget.id}`}
+                  {deleteTarget.keyOriginalName ?? deleteTarget.certOriginalName ?? `${t("nav.ssl")} #${deleteTarget.id}`}
                 </p>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Это действие необратимо.</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{t("common.irreversible")}</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -450,7 +453,7 @@ export default function SslPage() {
                 disabled={isDeleting}
                 className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-40"
               >
-                Отмена
+                {t("common.cancel")}
               </button>
               <button
                 onClick={confirmDelete}
@@ -458,8 +461,8 @@ export default function SslPage() {
                 className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-red-600 hover:bg-red-700 px-4 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-50"
               >
                 {isDeleting
-                  ? <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Удаление…</>
-                  : "Удалить"}
+                  ? <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>{t("certificates.deleting")}</>
+                  : t("common.delete")}
               </button>
             </div>
           </div>

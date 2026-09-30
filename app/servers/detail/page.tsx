@@ -28,6 +28,14 @@ interface MetricsHistoryPoint {
   diskTotalGb: number | null;
 }
 
+interface ProcessInfo {
+  pid: string;
+  name: string;
+  cpuPercent: number;
+  memPercent: number;
+  rssKb: number;
+}
+
 interface ServerMetrics {
   serverId: number;
   cpuPercent: number | null;
@@ -39,6 +47,7 @@ interface ServerMetrics {
   diskUsedGb: number | null;
   diskTotalGb: number | null;
   error: string | null;
+  topProcesses: ProcessInfo[] | null;
 }
 
 // ── Disk forecast ───────────────────────────────────────────────────────────────
@@ -541,6 +550,109 @@ function MetricChart({
   );
 }
 
+// ── TopProcessesTable ───────────────────────────────────────────────────────────
+
+function TopProcessesTable({ processes, memTotalMb, isDark }: {
+  processes: ProcessInfo[];
+  memTotalMb: number | null;
+  isDark: boolean;
+}) {
+  if (!processes || processes.length === 0) return null;
+
+  const fmtMb = (kb: number) => {
+    const mb = kb / 1024;
+    return mb >= 1024 ? `${(mb / 1024).toFixed(1)} ГБ` : `${Math.round(mb)} МБ`;
+  };
+
+  const maxRss = Math.max(...processes.map(p => p.rssKb), 1);
+
+  return (
+    <div className="glass-card rounded-xl overflow-hidden">
+      <div
+        style={{
+          display: "flex", alignItems: "center", gap: "0.5rem",
+          padding: "0.75rem 1.25rem",
+          borderBottom: `1px solid ${isDark ? "rgba(71,85,105,0.4)" : "#e2e8f0"}`,
+        }}
+      >
+        <span style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: isDark ? "#64748b" : "#94a3b8" }}>
+          Топ процессов по ОЗУ
+        </span>
+        <span style={{
+          fontSize: "0.65rem", fontWeight: 600, padding: "0.1rem 0.45rem",
+          borderRadius: "9999px", background: isDark ? "rgba(34,197,94,0.12)" : "#f0fdf4",
+          color: isDark ? "#4ade80" : "#16a34a",
+          border: `1px solid ${isDark ? "rgba(34,197,94,0.25)" : "#bbf7d0"}`,
+        }}>
+          {processes.length}
+        </span>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+          <thead>
+            <tr style={{ background: isDark ? "rgba(15,23,42,0.4)" : "#f8fafc" }}>
+              {["#", "Процесс", "PID", "ОЗУ", "%CPU", "%MEM"].map((h, i) => (
+                <th key={h} style={{
+                  padding: "0.45rem 0.85rem",
+                  textAlign: i === 0 ? "center" : i >= 3 ? "right" : "left",
+                  fontWeight: 600, fontSize: "0.68rem", letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  color: isDark ? "#64748b" : "#94a3b8",
+                  borderBottom: `1px solid ${isDark ? "rgba(71,85,105,0.3)" : "#e2e8f0"}`,
+                  whiteSpace: "nowrap",
+                }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {processes.map((p, i) => {
+              const barWidth = Math.round((p.rssKb / maxRss) * 100);
+              const isHigh = p.memPercent >= 20;
+              const isMed  = p.memPercent >= 10;
+              const barColor = isHigh ? "#ef4444" : isMed ? "#f97316" : "#22c55e";
+              return (
+                <tr key={p.pid} style={{
+                  background: i % 2 === 0
+                    ? (isDark ? "rgba(15,23,42,0.2)" : "transparent")
+                    : (isDark ? "rgba(30,41,59,0.3)" : "rgba(248,250,252,0.6)"),
+                }}>
+                  <td style={{ padding: "0.4rem 0.85rem", textAlign: "center", color: isDark ? "#475569" : "#94a3b8", fontWeight: 600 }}>{i + 1}</td>
+                  <td style={{ padding: "0.4rem 0.85rem", maxWidth: "200px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                      <span style={{
+                        fontFamily: "ui-monospace,monospace", fontSize: "0.75rem",
+                        fontWeight: 600, color: isDark ? "#e2e8f0" : "#0f172a",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }} title={p.name}>{p.name}</span>
+                      <div style={{
+                        height: "3px", borderRadius: "9999px",
+                        background: isDark ? "rgba(71,85,105,0.3)" : "#e2e8f0",
+                        overflow: "hidden",
+                      }}>
+                        <div style={{ width: `${barWidth}%`, height: "100%", background: barColor, borderRadius: "9999px", transition: "width 0.3s" }} />
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: "0.4rem 0.85rem", fontFamily: "ui-monospace,monospace", color: isDark ? "#64748b" : "#94a3b8", fontSize: "0.72rem" }}>{p.pid}</td>
+                  <td style={{ padding: "0.4rem 0.85rem", textAlign: "right", fontWeight: 600, color: isHigh ? "#ef4444" : isMed ? "#f97316" : (isDark ? "#e2e8f0" : "#0f172a") }}>
+                    {fmtMb(p.rssKb)}
+                  </td>
+                  <td style={{ padding: "0.4rem 0.85rem", textAlign: "right", color: p.cpuPercent >= 50 ? "#ef4444" : p.cpuPercent >= 20 ? "#f97316" : (isDark ? "#94a3b8" : "#64748b") }}>
+                    {p.cpuPercent.toFixed(1)}%
+                  </td>
+                  <td style={{ padding: "0.4rem 0.85rem", textAlign: "right", color: isHigh ? "#ef4444" : isMed ? "#f97316" : (isDark ? "#94a3b8" : "#64748b") }}>
+                    {p.memPercent.toFixed(1)}%
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ── Main page content ───────────────────────────────────────────────────────────
 
 function ServerDetailContent() {
@@ -767,6 +879,13 @@ function ServerDetailContent() {
           <MetricChart metric="cpu"  allData={history} theme={theme} />
           <MetricChart metric="ram"  allData={history} theme={theme} />
           <MetricChart metric="disk" allData={history} theme={theme} diskForecast={forecast} />
+          {metrics && !metrics.error && metrics.topProcesses && metrics.topProcesses.length > 0 && (
+            <TopProcessesTable
+              processes={metrics.topProcesses}
+              memTotalMb={metrics.memoryTotalMb}
+              isDark={isDark}
+            />
+          )}
         </div>
       )}
 

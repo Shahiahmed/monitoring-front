@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { apiFetch } from "../../lib/api";
+import { useLanguage } from "../../components/LanguageProvider";
 
 interface Application {
   id: number;
@@ -25,7 +25,9 @@ interface Application {
 
 const PAGE_SIZE = 20;
 
-function DeleteConfirmModal({ name, onConfirm, onCancel }: { name: string; onConfirm: () => void; onCancel: () => void }) {
+function DeleteConfirmModal({ name, onConfirm, onCancel, t }: {
+  name: string; onConfirm: () => void; onCancel: () => void; t: (k: string) => string;
+}) {
   return (
     <div className="reg-modal-backdrop" onClick={onCancel}>
       <div className="reg-confirm-modal" onClick={e => e.stopPropagation()}>
@@ -34,12 +36,12 @@ function DeleteConfirmModal({ name, onConfirm, onCancel }: { name: string; onCon
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
         </div>
-        <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mt-3 mb-1">Удалить сервис?</h3>
-        <p className="text-[13px] text-slate-500 dark:text-slate-400 text-center mb-1">Запись будет удалена из базы данных.</p>
+        <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mt-3 mb-1">{t("services.deleteSvc")}</h3>
+        <p className="text-[13px] text-slate-500 dark:text-slate-400 text-center mb-1">{t("services.deleteConfirm")}</p>
         <p className="text-[12px] font-semibold text-slate-600 dark:text-slate-300 mb-5">«{name}»</p>
         <div className="flex gap-3 w-full">
-          <button onClick={onCancel} className="reg-confirm-cancel flex-1">Отмена</button>
-          <button onClick={onConfirm} className="reg-confirm-ok flex-1">Удалить</button>
+          <button onClick={onCancel} className="reg-confirm-cancel flex-1">{t("common.cancel")}</button>
+          <button onClick={onConfirm} className="reg-confirm-ok flex-1">{t("common.delete")}</button>
         </div>
       </div>
     </div>
@@ -47,6 +49,7 @@ function DeleteConfirmModal({ name, onConfirm, onCancel }: { name: string; onCon
 }
 
 export default function ServicesRegistryPage() {
+  const { t } = useLanguage();
   const [apps, setApps] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +60,6 @@ export default function ServicesRegistryPage() {
   const [deleting, setDeleting] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     const u = JSON.parse(localStorage.getItem("authUser") ?? "{}");
@@ -86,7 +88,7 @@ export default function ServicesRegistryPage() {
       const res = await apiFetch(`applications/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(await res.text());
       setApps(prev => prev.filter(a => a.id !== id));
-    } catch (e: any) { alert("Ошибка: " + e.message); }
+    } catch (e: any) { alert(t("common.error") + ": " + e.message); }
     finally { setDeleting(null); }
   };
 
@@ -117,13 +119,13 @@ export default function ServicesRegistryPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Реестр сервисов</h1>
+          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">{t("services.registryTitle")}</h1>
           <p className="text-[12px] text-slate-400 mt-0.5">
-            {filtered.length} из {apps.length} сервисов
+            {filtered.length} {t("common.of")} {apps.length} {t("services.registryCountLabel")}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} className="reg-btn-icon" title="Обновить">
+          <button onClick={load} className="reg-btn-icon" title={t("common.refresh")}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
@@ -133,7 +135,7 @@ export default function ServicesRegistryPage() {
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
               </svg>
-              Добавить
+              {t("common.add")}
             </Link>
           )}
         </div>
@@ -148,7 +150,7 @@ export default function ServicesRegistryPage() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Поиск по названию, Artifact ID, SHEP ID…"
+            placeholder={t("services.registrySearchPlaceholder")}
             className="reg-search"
           />
           {search && (
@@ -160,16 +162,16 @@ export default function ServicesRegistryPage() {
           )}
         </div>
         <select value={filterType} onChange={e => setFilterType(e.target.value)} className="reg-filter-select">
-          <option value="">Все типы</option>
-          {allTypes.map(t => <option key={t} value={t}>{t}</option>)}
+          <option value="">{t("services.allTypes")}</option>
+          {allTypes.map(tp => <option key={tp} value={tp}>{tp}</option>)}
         </select>
         <select value={filterEnv} onChange={e => setFilterEnv(e.target.value)} className="reg-filter-select">
-          <option value="">Все окружения</option>
+          <option value="">{t("services.allEnvs")}</option>
           {allEnvs.map(e => <option key={e} value={e}>{e}</option>)}
         </select>
         {(search || filterType || filterEnv) && (
           <button onClick={() => { setSearch(""); setFilterType(""); setFilterEnv(""); }} className="reg-clear-btn">
-            Сбросить
+            {t("common.reset")}
           </button>
         )}
       </div>
@@ -180,7 +182,7 @@ export default function ServicesRegistryPage() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
           </svg>
-          Загрузка…
+          {t("common.loading2")}
         </div>
       )}
       {error && (
@@ -196,12 +198,12 @@ export default function ServicesRegistryPage() {
                 <thead>
                   <tr className="reg-thead-row">
                     <th className="text-left px-4 py-3 font-semibold w-10">#</th>
-                    <th className="text-left px-4 py-3 font-semibold">Название / Artifact ID</th>
-                    <th className="text-left px-4 py-3 font-semibold hidden md:table-cell">ИС МТЗСН</th>
-                    <th className="text-left px-4 py-3 font-semibold hidden lg:table-cell">SHEP ID</th>
-                    <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell">Тип</th>
-                    <th className="text-left px-4 py-3 font-semibold hidden xl:table-cell">Взаимодействие</th>
-                    <th className="text-left px-4 py-3 font-semibold">Окружения</th>
+                    <th className="text-left px-4 py-3 font-semibold">{t("services.nameArtifact")}</th>
+                    <th className="text-left px-4 py-3 font-semibold hidden md:table-cell">{t("services.isMtszn")}</th>
+                    <th className="text-left px-4 py-3 font-semibold hidden lg:table-cell">{t("services.shepId")}</th>
+                    <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell">{t("services.type")}</th>
+                    <th className="text-left px-4 py-3 font-semibold hidden xl:table-cell">{t("services.interaction")}</th>
+                    <th className="text-left px-4 py-3 font-semibold">{t("services.envs")}</th>
                     <th className="px-4 py-3 w-24"></th>
                   </tr>
                 </thead>
@@ -212,7 +214,7 @@ export default function ServicesRegistryPage() {
                         <svg className="w-8 h-8 mx-auto mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        Сервисы не найдены
+                        {t("services.servicesNotFound")}
                       </td>
                     </tr>
                   ) : paginated.map((app, idx) => (
@@ -254,14 +256,14 @@ export default function ServicesRegistryPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
-                          <Link href={`/services/detail?id=${app.id}`} className="reg-action-detail" title="Подробнее">
+                          <Link href={`/services/detail?id=${app.id}`} className="reg-action-detail" title={t("common.details")}>
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                           </Link>
                           {isAdmin && (
                             <>
-                              <Link href={`/services/add?id=${app.id}`} className="reg-action-edit" title="Редактировать">
+                              <Link href={`/services/add?id=${app.id}`} className="reg-action-edit" title={t("common.edit")}>
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
@@ -270,7 +272,7 @@ export default function ServicesRegistryPage() {
                                 onClick={() => setConfirmDelete({ id: app.id, name: app.name })}
                                 disabled={deleting === app.id}
                                 className="reg-action-delete"
-                                title="Удалить"
+                                title={t("common.delete")}
                               >
                                 {deleting === app.id
                                   ? <span className="text-[10px]">…</span>
@@ -294,7 +296,7 @@ export default function ServicesRegistryPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4 px-1">
               <span className="text-xs text-slate-400">
-                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} из {filtered.length}
+                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} {t("common.of")} {filtered.length}
               </span>
               <div className="flex items-center gap-1">
                 <button
@@ -342,6 +344,7 @@ export default function ServicesRegistryPage() {
           name={confirmDelete.name}
           onConfirm={() => handleDelete(confirmDelete.id)}
           onCancel={() => setConfirmDelete(null)}
+          t={t}
         />
       )}
 
@@ -395,111 +398,86 @@ export default function ServicesRegistryPage() {
           color: #94a3b8; background: none; border: none; cursor: pointer; padding: 2px;
           display: flex; align-items: center;
         }
-        .reg-search-clear:hover { color: #475569; }
+        .reg-search-clear:hover { color: #64748b; }
         .reg-filter-select {
           border-radius: 12px; border: 1px solid rgba(226,232,240,0.9);
-          background: rgba(255,255,255,0.95); color: #475569;
-          font-size: 12px; padding: 8px 12px; outline: none; cursor: pointer;
-          transition: box-shadow 0.15s;
+          background: rgba(255,255,255,0.95); color: #1e293b;
+          font-size: 13px; padding: 8px 14px; outline: none; cursor: pointer;
         }
-        html.dark .reg-filter-select { background: rgba(15,23,42,0.7); border-color: rgba(255,255,255,0.09); color: #94a3b8; }
-        .reg-filter-select:focus { box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+        html.dark .reg-filter-select { background: rgba(15,23,42,0.7); border-color: rgba(255,255,255,0.09); color: #e2e8f0; }
         .reg-clear-btn {
-          font-size: 12px; color: #64748b; background: none; border: none;
-          cursor: pointer; padding: 4px 8px; border-radius: 8px; transition: color 0.15s;
-        }
-        html.dark .reg-clear-btn { color: #94a3b8; }
-        .reg-clear-btn:hover { color: #2563eb; }
-
-        .reg-btn-primary {
-          display: inline-flex; align-items: center; gap: 5px;
-          border-radius: 12px; padding: 8px 14px; font-weight: 600; font-size: 12px;
-          background: linear-gradient(135deg,#2563eb,#1e40af);
-          color: white; box-shadow: 0 3px 10px rgba(37,99,235,0.3);
-          transition: box-shadow 0.15s, transform 0.1s; text-decoration: none;
-        }
-        .reg-btn-primary:hover { box-shadow: 0 5px 18px rgba(37,99,235,0.46); transform: translateY(-1px); }
-        .reg-btn-icon {
-          display: inline-flex; align-items: center; justify-content: center;
-          width: 36px; height: 36px; border-radius: 10px;
+          padding: 8px 14px; border-radius: 12px; font-size: 13px;
           border: 1px solid rgba(226,232,240,0.9);
-          background: rgba(255,255,255,0.9); color: #64748b; cursor: pointer;
+          background: rgba(255,255,255,0.95); color: #64748b; cursor: pointer;
           transition: all 0.15s;
         }
-        html.dark .reg-btn-icon { background: rgba(15,23,42,0.6); border-color: rgba(255,255,255,0.08); color: #94a3b8; }
-        .reg-btn-icon:hover { border-color: rgba(37,99,235,0.3); color: #2563eb; }
-
-        .reg-action-detail {
-          display: inline-flex; align-items: center; justify-content: center;
-          width: 28px; height: 28px; border-radius: 8px;
-          border: 1px solid rgba(99,102,241,0.2); color: #6366f1;
-          background: rgba(99,102,241,0.06); transition: all 0.12s; text-decoration: none;
+        html.dark .reg-clear-btn { background: rgba(15,23,42,0.7); border-color: rgba(255,255,255,0.09); color: #94a3b8; }
+        .reg-clear-btn:hover { background: rgba(37,99,235,0.06); color: #2563eb; border-color: rgba(37,99,235,0.25); }
+        .reg-btn-icon {
+          width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+          border: 1px solid rgba(226,232,240,0.9); background: rgba(255,255,255,0.95);
+          color: #64748b; cursor: pointer; transition: all 0.15s;
         }
-        .reg-action-detail:hover { background: rgba(99,102,241,0.15); }
-        .reg-action-edit {
-          display: inline-flex; align-items: center; justify-content: center;
-          width: 28px; height: 28px; border-radius: 8px;
-          border: 1px solid rgba(37,99,235,0.2); color: #2563eb;
-          background: rgba(37,99,235,0.06); transition: all 0.12s; text-decoration: none;
+        html.dark .reg-btn-icon { background: rgba(15,23,42,0.7); border-color: rgba(255,255,255,0.09); color: #94a3b8; }
+        .reg-btn-icon:hover { background: rgba(37,99,235,0.06); color: #2563eb; border-color: rgba(37,99,235,0.25); }
+        .reg-btn-primary {
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 600;
+          background: linear-gradient(135deg, #2563eb, #1d4ed8);
+          color: white; border: none; cursor: pointer; transition: all 0.15s;
+          text-decoration: none;
         }
-        .reg-action-edit:hover { background: rgba(37,99,235,0.15); }
-        .reg-action-delete {
+        .reg-btn-primary:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+        .reg-action-detail, .reg-action-edit, .reg-action-delete {
           display: inline-flex; align-items: center; justify-content: center;
-          width: 28px; height: 28px; border-radius: 8px; cursor: pointer;
-          border: 1px solid rgba(239,68,68,0.2); color: #dc2626;
-          background: rgba(239,68,68,0.06); transition: all 0.12s;
+          width: 28px; height: 28px; border-radius: 8px; border: 1px solid;
+          cursor: pointer; transition: all 0.12s;
         }
-        .reg-action-delete:hover:not(:disabled) { background: rgba(239,68,68,0.15); }
+        .reg-action-detail { border-color: rgba(14,165,233,0.3); color: #0284c7; background: rgba(14,165,233,0.07); }
+        .reg-action-detail:hover { background: rgba(14,165,233,0.18); }
+        .reg-action-edit { border-color: rgba(99,102,241,0.3); color: #6366f1; background: rgba(99,102,241,0.07); }
+        .reg-action-edit:hover { background: rgba(99,102,241,0.18); }
+        .reg-action-delete { border-color: rgba(239,68,68,0.3); color: #dc2626; background: rgba(239,68,68,0.07); }
+        .reg-action-delete:hover:not(:disabled) { background: rgba(239,68,68,0.18); }
         .reg-action-delete:disabled { opacity: 0.4; cursor: not-allowed; }
-
         .reg-page-btn {
           display: inline-flex; align-items: center; justify-content: center;
-          min-width: 30px; height: 30px; border-radius: 8px; font-size: 12px;
-          border: 1px solid rgba(226,232,240,0.9); background: rgba(255,255,255,0.9);
-          color: #475569; cursor: pointer; transition: all 0.12s; padding: 0 6px;
+          min-width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(226,232,240,0.9);
+          background: rgba(255,255,255,0.95); color: #475569;
+          font-size: 12px; cursor: pointer; transition: all 0.12s; padding: 0 6px;
         }
-        html.dark .reg-page-btn { background: rgba(15,23,42,0.6); border-color: rgba(255,255,255,0.08); color: #94a3b8; }
-        .reg-page-btn:hover:not(:disabled) { border-color: rgba(37,99,235,0.35); color: #2563eb; }
+        html.dark .reg-page-btn { background: rgba(15,23,42,0.7); border-color: rgba(255,255,255,0.09); color: #94a3b8; }
+        .reg-page-btn:hover:not(:disabled) { background: rgba(37,99,235,0.06); border-color: rgba(37,99,235,0.3); color: #2563eb; }
         .reg-page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-        .reg-page-active {
-          background: linear-gradient(135deg,#2563eb,#1e40af) !important;
-          color: white !important; border-color: transparent !important;
-          box-shadow: 0 2px 8px rgba(37,99,235,0.35);
-        }
-        .reg-page-ellipsis {
-          display: inline-flex; align-items: center; justify-content: center;
-          min-width: 30px; height: 30px; color: #94a3b8; font-size: 12px;
-        }
+        .reg-page-active { background: #2563eb !important; border-color: #2563eb !important; color: white !important; }
+        .reg-page-ellipsis { font-size: 12px; color: #94a3b8; padding: 0 4px; }
         .reg-modal-backdrop {
           position: fixed; inset: 0; z-index: 50;
-          background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);
+          background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
           display: flex; align-items: center; justify-content: center; padding: 16px;
         }
         .reg-confirm-modal {
-          background: #fff; border-radius: 20px; padding: 28px 24px 24px;
-          width: 100%; max-width: 340px; display: flex; flex-direction: column;
-          align-items: center; box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+          background: white; border-radius: 20px; padding: 28px 24px;
+          max-width: 360px; width: 100%;
+          box-shadow: 0 32px 80px rgba(0,0,0,0.18);
+          display: flex; flex-direction: column; align-items: center;
         }
         html.dark .reg-confirm-modal { background: #1e293b; }
         .reg-confirm-icon {
-          width: 56px; height: 56px; border-radius: 16px;
-          display: flex; align-items: center; justify-content: center;
-          background: rgba(239,68,68,0.1);
+          width: 52px; height: 52px; border-radius: 16px;
+          background: rgba(239,68,68,0.1); display: flex; align-items: center; justify-content: center;
         }
-        html.dark .reg-confirm-icon { background: rgba(239,68,68,0.15); }
         .reg-confirm-cancel {
-          padding: 10px 0; border-radius: 12px; font-size: 13px; font-weight: 500;
-          border: 1px solid rgba(226,232,240,0.9);
-          background: rgba(255,255,255,0.9); color: #475569; cursor: pointer; transition: all 0.15s;
+          padding: 10px 0; border-radius: 12px; font-size: 14px; font-weight: 500;
+          border: 1px solid rgba(226,232,240,0.9); background: transparent; color: #475569; cursor: pointer;
         }
-        html.dark .reg-confirm-cancel { background: rgba(30,41,59,0.7); border-color: rgba(255,255,255,0.1); color: #94a3b8; }
-        .reg-confirm-cancel:hover { border-color: rgba(100,116,139,0.5); }
+        html.dark .reg-confirm-cancel { border-color: rgba(255,255,255,0.1); color: #94a3b8; }
+        .reg-confirm-cancel:hover { background: rgba(0,0,0,0.04); }
         .reg-confirm-ok {
-          padding: 10px 0; border-radius: 12px; font-size: 13px; font-weight: 600;
-          border: none; color: white; cursor: pointer; transition: all 0.15s;
-          background: #dc2626; box-shadow: 0 3px 10px rgba(220,38,38,0.3);
+          padding: 10px 0; border-radius: 12px; font-size: 14px; font-weight: 600;
+          border: none; background: linear-gradient(135deg,#ef4444,#dc2626); color: white; cursor: pointer;
         }
-        .reg-confirm-ok:hover { background: #b91c1c; transform: translateY(-1px); }
+        .reg-confirm-ok:hover { background: linear-gradient(135deg,#dc2626,#b91c1c); }
       `}</style>
     </div>
   );

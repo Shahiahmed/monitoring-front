@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
+import { useLanguage } from "../../components/LanguageProvider";
 
 interface Role {
   id: number;
@@ -31,6 +32,7 @@ const roleConfig: Record<string, { icon: string; accent: string; bg: string }> =
   };
 
 export default function RolesPage() {
+  const { t } = useLanguage();
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,11 +41,11 @@ export default function RolesPage() {
     const fetchRoles = async () => {
       try {
         const res = await apiFetch("roles");
-        if (!res.ok) throw new Error("Не удалось загрузить роли");
+        if (!res.ok) throw new Error(t("roles.loadError"));
         const data = (await res.json()) as Role[];
         setRoles(data);
       } catch (e: any) {
-        setError(e.message ?? "Ошибка загрузки ролей");
+        setError(e.message ?? t("roles.loadError"));
       } finally {
         setLoading(false);
       }
@@ -56,17 +58,17 @@ export default function RolesPage() {
       {/* Заголовок */}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
-          Роли доступа
+          {t("roles.title")}
         </h1>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Управление ролями пользователей системы
+          {t("roles.subtitle")}
         </p>
       </div>
 
       {/* Состояния */}
       {loading && (
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Загрузка...
+          {t("roles.loading")}
         </p>
       )}
 
@@ -121,9 +123,9 @@ export default function RolesPage() {
                 {/* Переводы */}
                 <div className="space-y-2 border-t border-gray-100 pt-3 dark:border-gray-700">
                   {[
-                    { label: "Русский", value: role.nameRu },
-                    { label: "Қазақша", value: role.nameKz },
-                    { label: "English", value: role.nameEn },
+                    { label: t("roles.ru"), value: role.nameRu },
+                    { label: t("roles.kz"), value: role.nameKz },
+                    { label: t("roles.en"), value: role.nameEn },
                   ].map((row) => (
                     <div
                       key={row.label}
@@ -144,7 +146,7 @@ export default function RolesPage() {
 
           {roles.length === 0 && (
             <div className="col-span-full rounded-lg border border-gray-200 bg-white p-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-              Роли не найдены
+              {t("roles.notFound")}
             </div>
           )}
         </div>

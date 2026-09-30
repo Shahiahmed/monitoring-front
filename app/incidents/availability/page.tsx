@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "../../lib/api";
 import { datesFromYearQuarter } from "../../lib/incidentPeriodFilters";
+import { useLanguage } from "../../components/LanguageProvider";
 
 interface IsAvailability {
   id: number;
@@ -31,6 +32,7 @@ function formatPercent(value: number): string {
 }
 
 export default function IncidentsAvailabilityPage() {
+  const { t } = useLanguage();
   const [rows, setRows] = useState<IsAvailability[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,11 +56,11 @@ export default function IncidentsAvailabilityPage() {
       }
       const q = params.toString();
       const res = await apiFetch(`incidents/stats${q ? "?" + q : ""}`);
-      if (!res.ok) throw new Error("Не удалось загрузить данные");
+      if (!res.ok) throw new Error(t("availability.loadError"));
       const data: StatsPayload = await res.json();
       setRows(data.byIsAvailability ?? []);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Ошибка загрузки");
+      setError(e instanceof Error ? e.message : t("availability.loadError"));
     } finally {
       setLoading(false);
     }
@@ -124,9 +126,9 @@ export default function IncidentsAvailabilityPage() {
             </svg>
           </div>
           <div>
-            <h1 className="text-base font-bold text-gray-900 dark:text-white tracking-tight leading-tight">Доступность ИС МТЗСН</h1>
+            <h1 className="text-base font-bold text-gray-900 dark:text-white tracking-tight leading-tight">{t("availability.isMtszn")}</h1>
             <Link href="/incidents/statistics" className="mt-0.5 block w-fit text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
-              → Статистика событий
+              {t("availability.statisticsLink")}
             </Link>
           </div>
         </div>
@@ -136,7 +138,7 @@ export default function IncidentsAvailabilityPage() {
       <div className="jrn-panel rounded-2xl p-5 flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Год</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t("availability.year")}</span>
             {incidentYears.map(y => (
               <button key={y} type="button"
                 onClick={() => applyYQ(selectedYear === String(y) ? "" : String(y), selectedQuarter)}
@@ -145,12 +147,12 @@ export default function IncidentsAvailabilityPage() {
               </button>
             ))}
             {selectedYear && (
-              <button type="button" onClick={() => applyYQ("", selectedQuarter)} className="jrn-chip jrn-chip-reset">Все</button>
+              <button type="button" onClick={() => applyYQ("", selectedQuarter)} className="jrn-chip jrn-chip-reset">{t("availability.all")}</button>
             )}
           </div>
           <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 hidden sm:block" />
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Квартал</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t("availability.quarter")}</span>
             {[1, 2, 3, 4].map(q => (
               <button key={q} type="button"
                 onClick={() => applyYQ(selectedYear || String(new Date().getFullYear()), selectedQuarter === String(q) ? "" : String(q))}
@@ -159,32 +161,32 @@ export default function IncidentsAvailabilityPage() {
               </button>
             ))}
             {selectedQuarter && (
-              <button type="button" onClick={() => applyYQ(selectedYear, "")} className="jrn-chip jrn-chip-reset">Все</button>
+              <button type="button" onClick={() => applyYQ(selectedYear, "")} className="jrn-chip jrn-chip-reset">{t("availability.all")}</button>
             )}
           </div>
           <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 hidden sm:block" />
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Вид</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t("availability.view")}</span>
             <button type="button" onClick={() => setTableView("all")}
               className={`jrn-chip ${tableView === "all" ? "jrn-chip-on" : ""}`}>
-              Все ИС
+              {t("availability.allIs")}
             </button>
             <button type="button" onClick={() => setTableView("withOutage")}
               className={`jrn-chip ${tableView === "withOutage" ? "jrn-chip-on" : ""}`}>
-              Со сбоями
+              {t("availability.withFailures")}
             </button>
           </div>
         </div>
         <div className="h-px bg-slate-100 dark:bg-white/5" />
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Дата с</label>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{t("availability.dateFrom")}</label>
             <input type="date" value={dateFrom}
               onChange={e => { setSelectedYear(""); setSelectedQuarter(""); setDateFrom(e.target.value); }}
               className={selectCls} />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Дата по</label>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{t("availability.dateTo")}</label>
             <input type="date" value={dateTo}
               onChange={e => { setSelectedYear(""); setSelectedQuarter(""); setDateTo(e.target.value); }}
               className={selectCls} />
@@ -194,7 +196,7 @@ export default function IncidentsAvailabilityPage() {
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            Применить
+            {t("availability.apply")}
           </button>
           {hasFilter && (
             <button type="button" onClick={reset}
@@ -202,7 +204,7 @@ export default function IncidentsAvailabilityPage() {
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-              Сбросить
+              {t("availability.reset")}
             </button>
           )}
         </div>
@@ -215,7 +217,7 @@ export default function IncidentsAvailabilityPage() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
           </svg>
-          Загрузка…
+          {t("availability.loading")}
         </div>
       )}
 
@@ -231,17 +233,17 @@ export default function IncidentsAvailabilityPage() {
         <>
           <div className="st-panel rounded-2xl overflow-hidden">
             {rows.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">Нет записей в справочнике ИС</p>
+              <p className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">{t("availability.noIsData")}</p>
             ) : displayRows.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">За выбранный период нет ИС с зафиксированным простоем</p>
+              <p className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">{t("availability.noFailures")}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-120">
                   <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-white/6">
                     <tr>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Наименование</th>
-                      <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Простой (мин)</th>
-                      <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Доступность (%)</th>
+                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t("availability.name")}</th>
+                      <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t("availability.downtimeMin")}</th>
+                      <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t("availability.availPercent")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-white/4">
@@ -264,7 +266,7 @@ export default function IncidentsAvailabilityPage() {
                   <tfoot>
                     <tr className="border-t-2 border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800/60">
                       <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">
-                        Общая доступность ({rows.length} позиций)
+                        {t("availability.overallAvail").replace("{n}", String(rows.length))}
                       </td>
                       <td className="px-4 py-3 text-right text-sm font-semibold text-slate-700 dark:text-slate-300">
                         {totalDowntime > 0 ? totalDowntime : "—"}
@@ -281,9 +283,9 @@ export default function IncidentsAvailabilityPage() {
 
           {/* Formula */}
           <div className="px-1 text-xs text-slate-400 dark:text-slate-500 space-y-1">
-            <p className="font-semibold text-slate-500 dark:text-slate-400">Формула расчёта:</p>
-            <p className="font-mono">Доступность (%) = ({minsPerYear.toLocaleString("ru-RU")} × N − Простой) / ({minsPerYear.toLocaleString("ru-RU")} × N) × 100</p>
-            <p>где {minsPerYear.toLocaleString("ru-RU")} — минут в {activeYear} году ({daysInYear} дней), N — количество позиций, Простой — суммарное время в минутах.</p>
+            <p className="font-semibold text-slate-500 dark:text-slate-400">{t("availability.formula")}</p>
+            <p className="font-mono">{t("availability.formulaText").replaceAll("{mins}", minsPerYear.toLocaleString("ru-RU"))}</p>
+            <p>{t("availability.formulaNote").replaceAll("{mins}", minsPerYear.toLocaleString("ru-RU")).replace("{year}", String(activeYear)).replace("{days}", String(daysInYear))}</p>
           </div>
         </>
       )}

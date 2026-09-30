@@ -35,7 +35,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (savedTheme) {
       initialTheme = savedTheme;
     } else {
-      initialTheme = 'dark';
+      initialTheme = 'light';
     }
     
     setTheme(initialTheme);

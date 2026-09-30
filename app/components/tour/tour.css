@@ -1,0 +1,137 @@
+/* Оформление интерактивного тура (driver.js) под тему SARAP. */
+
+:root {
+  --tour-bg: #ffffff;
+  --tour-fg: #0f172a;
+  --tour-muted: #64748b;
+  --tour-border: rgba(99, 140, 210, 0.35);
+  --tour-shadow: 0 12px 40px rgba(30, 64, 175, 0.18);
+  --tour-accent: #2563eb;
+  --tour-accent-fg: #ffffff;
+  --tour-btn-bg: rgba(148, 163, 184, 0.12);
+  --tour-btn-fg: #334155;
+  /* Кольцо вокруг выделенного блока */
+  --tour-ring: rgba(37, 99, 235, 0.85);
+  --tour-ring-glow: rgba(37, 99, 235, 0.18);
+}
+
+.dark {
+  --tour-bg: #1e293b;
+  --tour-fg: #f1f5f9;
+  --tour-muted: #94a3b8;
+  --tour-border: rgba(255, 255, 255, 0.12);
+  --tour-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  --tour-accent: #3b82f6;
+  --tour-accent-fg: #ffffff;
+  --tour-btn-bg: rgba(148, 163, 184, 0.16);
+  --tour-btn-fg: #cbd5e1;
+  /* В тёмной теме кольцо ярче — иначе вырез не читается на тёмном фоне */
+  --tour-ring: rgba(96, 165, 250, 0.95);
+  --tour-ring-glow: rgba(96, 165, 250, 0.28);
+}
+
+.driver-popover.sarap-tour {
+  font-family: var(--font-geist-sans);
+  background-color: var(--tour-bg);
+  color: var(--tour-fg);
+  border: 1px solid var(--tour-border);
+  border-radius: 14px;
+  box-shadow: var(--tour-shadow);
+  min-width: 260px;
+  max-width: 360px;
+  padding: 18px 18px 14px;
+}
+
+.driver-popover.sarap-tour .driver-popover-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--tour-fg);
+  padding-right: 24px;
+}
+
+.driver-popover.sarap-tour .driver-popover-description {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--tour-muted);
+}
+
+.driver-popover.sarap-tour .driver-popover-close-btn {
+  width: 28px;
+  height: 26px;
+  color: var(--tour-muted);
+  font-size: 20px;
+  line-height: 26px;
+}
+
+.driver-popover.sarap-tour .driver-popover-close-btn:hover,
+.driver-popover.sarap-tour .driver-popover-close-btn:focus {
+  color: var(--tour-fg);
+}
+
+.driver-popover.sarap-tour .driver-popover-footer {
+  margin-top: 16px;
+  gap: 12px;
+}
+
+.driver-popover.sarap-tour .driver-popover-progress-text {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tour-muted);
+}
+
+.driver-popover.sarap-tour .driver-popover-footer-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  background-color: var(--tour-btn-bg);
+  color: var(--tour-btn-fg);
+  transition: background-color 0.15s, color 0.15s, transform 0.1s;
+}
+
+.driver-popover.sarap-tour .driver-popover-footer-btn:hover {
+  background-color: color-mix(in srgb, var(--tour-btn-bg) 60%, var(--tour-fg) 12%);
+}
+
+.driver-popover.sarap-tour .driver-popover-footer-btn:active {
+  transform: scale(0.97);
+}
+
+.driver-popover.sarap-tour .driver-popover-next-btn {
+  background-color: var(--tour-accent);
+  color: var(--tour-accent-fg);
+}
+
+.driver-popover.sarap-tour .driver-popover-next-btn:hover {
+  background-color: color-mix(in srgb, var(--tour-accent) 85%, #000 15%);
+}
+
+.driver-popover.sarap-tour .driver-popover-navigation-btns button + button {
+  margin-left: 8px;
+}
+
+/* Стрелка поповера — в цвет фона карточки */
+.driver-popover.sarap-tour .driver-popover-arrow-side-left   { border-left-color: var(--tour-bg); }
+.driver-popover.sarap-tour .driver-popover-arrow-side-right  { border-right-color: var(--tour-bg); }
+.driver-popover.sarap-tour .driver-popover-arrow-side-top    { border-top-color: var(--tour-bg); }
+.driver-popover.sarap-tour .driver-popover-arrow-side-bottom { border-bottom-color: var(--tour-bg); }
+
+/* Маска затемнения. driver.js задаёт fill/opacity инлайном — отсюда !important.
+   В тёмной теме затемнять сильно нельзя: фон и так почти чёрный, страница
+   превращается в чёрный экран. Контраст даёт кольцо ниже, а не плотность маски. */
+.dark .driver-overlay path {
+  fill: #020617 !important;
+  opacity: 0.55 !important;
+}
+
+/* Подсвеченный элемент: кольцо укладывается внутрь выреза (stagePadding: 8),
+   поэтому не гасится маской и одинаково чётко видно в обеих темах. */
+.driver-active-element {
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 2px var(--tour-ring),
+    0 0 0 7px var(--tour-ring-glow) !important;
+}

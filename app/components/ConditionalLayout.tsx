@@ -6,6 +6,7 @@ import Header from './Header';
 import Footer from './Footer';
 import Sidebar from './Sidebar';
 import AiChatWidget from './AiChatWidget';
+import { TourProvider } from './TourProvider';
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -13,12 +14,13 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
 
   const isLoginPage = pathname === '/login' || pathname === '/login/'
     || pathname === '/forgot-password' || pathname === '/forgot-password/';
+  const isPublicPage = pathname?.startsWith('/wall');
   const [authChecked,  setAuthChecked]  = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [justLoggedIn, setJustLoggedIn] = useState(false);
 
   useEffect(() => {
-    if (isLoginPage) {
+    if (isLoginPage || isPublicPage) {
       setAuthChecked(true);
       return;
     }
@@ -37,7 +39,7 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
     }
   }, [isLoginPage, router]);
 
-  if (isLoginPage) return <>{children}</>;
+  if (isLoginPage || isPublicPage) return <>{children}</>;
 
   if (!authChecked || !isAuthorized) {
     return (
@@ -48,6 +50,7 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
   }
 
   return (
+    <TourProvider>
     <div className="flex flex-col flex-1 min-h-screen">
       <Header className={justLoggedIn ? "stagger-header" : ""} />
       <div className="flex flex-1 pt-16">
@@ -65,5 +68,6 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
       <Footer />
       <AiChatWidget />
     </div>
+    </TourProvider>
   );
 }

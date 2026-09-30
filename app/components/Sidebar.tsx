@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { useLanguage } from './LanguageProvider';
+import { EXPAND_SIDEBAR_EVENT } from './tour/tourSteps';
 
 interface NavSubItem {
   name: string;
@@ -16,113 +18,113 @@ interface NavItem {
   href?: string;
   icon: React.ReactNode;
   children?: NavSubItem[];
+  adminOnly?: boolean;
 }
 
-const navigation: NavItem[] = [
-  {
-    name: 'Главная',
-    href: '/',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-      </svg>
-    ),
-  },
-  {
-    name: 'Серверы',
-    href: '/servers',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
-      </svg>
-    ),
-  },
-  {
-    name: 'Инциденты',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-      </svg>
-    ),
-    children: [
-      { name: 'Журнал событий', href: '/incidents/events' },
-      { name: 'Статистика', href: '/incidents/statistics' },
-      { name: 'Доступность ИС', href: '/incidents/availability' },
-    ],
-  },
-  {
-    name: 'Сервисы',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-      </svg>
-    ),
-    children: [
-      { name: 'Список сервисов', href: '/services' },
-      { name: 'Реестр сервисов', href: '/services/registry' },
-      { name: 'Добавить сервис', href: '/services/add' },
-    ],
-  },
-  {
-    name: 'Справочники',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-      </svg>
-    ),
-    children: [
-      { name: 'Местоположения', href: '/references/locations' },
-      { name: 'Окружения', href: '/references/environments' },
-      { name: 'Гос органы', href: '/references/government-bodies' },
-      { name: 'ИС', href: '/references/information-systems' },
-      { name: 'Типы взаимодействия', href: '/references/interaction-types' },
-      { name: 'Типы приложения', href: '/references/application-types' },
-      { name: 'Типы инцидентов', href: '/references/failure-types' },
-      { name: 'Серверы', href: '/references/servers' },
-    ],
-  },
-  {
-    name: 'Пользователи',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-      </svg>
-    ),
-    children: [
-      {
-        name: 'Список пользователей',
-        href: '/users',
-      },
-      {
-        name: 'Регистрация',
-        href: '/users/register',
-        adminOnly: true,
-      },
-      {
-        name: 'Роли',
-        href: '/users/roles',
-      },
-    ],
-  },
-  {
-    name: 'Настройки',
-    href: '/settings',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-    children: [
-      { name: 'ЭЦП/SSL', href: '/settings/ssl' },
-      { name: 'Журнал действий', href: '/settings/activity' },
-    ],
-  },
-];
+function buildNavigation(t: (key: string) => string): NavItem[] {
+  return [
+    {
+      name: t('nav.dashboard'),
+      href: '/',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+      ),
+    },
+    {
+      name: t('nav.servers'),
+      href: '/servers',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+        </svg>
+      ),
+    },
+    {
+      name: t('nav.incidents'),
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      ),
+      children: [
+        { name: t('nav.events'),      href: '/incidents/events' },
+        { name: t('nav.statistics'),  href: '/incidents/statistics' },
+        { name: t('nav.availability'),href: '/incidents/availability' },
+      ],
+    },
+    {
+      name: t('nav.services'),
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      ),
+      children: [
+        { name: t('nav.servicesList'),    href: '/services',          adminOnly: true },
+        { name: t('nav.servicesRegistry'),href: '/services/registry', adminOnly: true },
+        { name: t('nav.servicesAdd'),     href: '/services/add',      adminOnly: true },
+        { name: 'Запросы сервисов',       href: '/statistics/integrations' },
+        { name: 'Мои сервисы',            href: '/services/my-services' },
+        { name: 'Мои подключения',        href: '/services/my-connections' },
+      ],
+    },
+    {
+      name: t('nav.references'),
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      ),
+      children: [
+        { name: t('nav.locations'),        href: '/references/locations' },
+        { name: t('nav.environments'),     href: '/references/environments' },
+        { name: t('nav.govBodies'),        href: '/references/government-bodies' },
+        { name: t('nav.infoSystems'),      href: '/references/information-systems' },
+        { name: t('nav.interactionTypes'), href: '/references/interaction-types' },
+        { name: t('nav.appTypes'),         href: '/references/application-types' },
+        { name: t('nav.failureTypes'),     href: '/references/failure-types' },
+        { name: t('nav.serversRef'),       href: '/references/servers' },
+      ],
+    },
+    {
+      name: t('nav.users'),
+      adminOnly: true,
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ),
+      children: [
+        { name: t('nav.usersList'), href: '/users' },
+        { name: t('nav.register'),  href: '/users/register', adminOnly: true },
+        { name: t('nav.roles'),     href: '/users/roles' },
+      ],
+    },
+    {
+      name: t('nav.settings'),
+      adminOnly: true,
+      href: '/settings',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+      children: [
+        { name: t('nav.ssl'),      href: '/settings/ssl' },
+        { name: t('nav.activity'), href: '/settings/activity' },
+      ],
+    },
+  ];
+}
 
 export default function Sidebar({ className = "" }: { className?: string }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useLanguage();
+  const navigation = buildNavigation(t);
   // Всегда начинаем с false для совместимости SSR
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -149,6 +151,17 @@ export default function Sidebar({ className = "" }: { className?: string }) {
 
   useEffect(() => {
   }, [pathname, collapsed, mounted]);
+
+  useEffect(() => {
+    // Тур просит развернуть меню, чтобы подписи пунктов были видны
+    const onTourExpand = () => {
+      setCollapsed(false);
+      localStorage.setItem('sidebarCollapsed', 'false');
+      document.documentElement.style.setProperty('--sidebar-width', '16rem');
+    };
+    window.addEventListener(EXPAND_SIDEBAR_EVENT, onTourExpand);
+    return () => window.removeEventListener(EXPAND_SIDEBAR_EVENT, onTourExpand);
+  }, []);
 
   useEffect(() => {
     // Фиксируем высоту сайдбара по viewport (решает баг при первом входе после логина)
@@ -261,6 +274,7 @@ export default function Sidebar({ className = "" }: { className?: string }) {
   return (
     <>
       <aside
+        data-tour="sidebar"
         suppressHydrationWarning
         style={{
           width: 'var(--sidebar-width, 16rem)',
@@ -272,7 +286,7 @@ export default function Sidebar({ className = "" }: { className?: string }) {
         {/* Прокручиваемая область меню */}
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-4 sidebar-scroll">
         <nav className="space-y-1">
-          {navigation.map((item) => {
+          {navigation.filter(item => !item.adminOnly || userIsAdminOrSuper).map((item) => {
             const isActive = isItemActive(item);
             const hasChildren = item.children && item.children.length > 0;
             const isExpanded = expandedItems.has(item.name);
@@ -381,7 +395,7 @@ export default function Sidebar({ className = "" }: { className?: string }) {
         </div>
 
         {/* Выйти — всегда внизу сайдбара (не прокручивается) */}
-        <div className="flex-shrink-0 py-4 border-t border-slate-300 dark:border-gray-800">
+        <div data-tour="sidebar-logout" className="flex-shrink-0 py-4 border-t border-slate-300 dark:border-gray-800">
         <div className="flex items-center min-h-12 px-1">
           <div className="w-16 flex-shrink-0 flex justify-center">
             <button
@@ -410,6 +424,7 @@ export default function Sidebar({ className = "" }: { className?: string }) {
       {/* Плавающая таблетка на границе сайдбар / контент */}
       <button
         onClick={toggleSidebar}
+        data-tour="sidebar-toggle"
         style={{ left: 'calc(var(--sidebar-width) - 14px)', top: 'calc(2rem + 50vh)' }}
         className="fixed -translate-y-1/2 w-7 h-14 rounded-full flex items-center justify-center glass border border-white/50 dark:border-white/20 hover:scale-105 z-[60] transition-all duration-300"
         aria-label={displayCollapsed ? 'Развернуть меню' : 'Свернуть меню'}

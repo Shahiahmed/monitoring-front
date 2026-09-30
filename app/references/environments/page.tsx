@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
+import { useLanguage } from "../../components/LanguageProvider";
 
 interface Env {
   id: number;
@@ -20,6 +21,7 @@ function isAdminOrSuperAdmin(user: AuthUser | null): boolean {
 }
 
 export default function EnvironmentsPage() {
+  const { t } = useLanguage();
   const [items, setItems] = useState<Env[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,11 +46,11 @@ export default function EnvironmentsPage() {
   const fetchItems = async () => {
     try {
       const res = await apiFetch("environments");
-      if (!res.ok) throw new Error("Не удалось загрузить данные");
+      if (!res.ok) throw new Error(t("common.error"));
       const data = (await res.json()) as Env[];
       setItems(data);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Ошибка загрузки");
+      setError(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setLoading(false);
     }
@@ -85,17 +87,17 @@ export default function EnvironmentsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Удалить окружение?")) return;
+    if (!confirm(t("references.environmentsDeleteConfirm"))) return;
     try {
       const res = await apiFetch(`environments/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const msg = await res.text();
-        alert(msg || "Ошибка при удалении");
+        alert(msg || t("references.deleteError"));
         return;
       }
       setItems((prev) => prev.filter((l) => l.id !== id));
     } catch {
-      alert("Ошибка при удалении");
+      alert(t("references.deleteError"));
     }
   };
 
@@ -118,7 +120,7 @@ export default function EnvironmentsPage() {
       });
       if (!res.ok) {
         const msg = await res.text();
-        alert(msg || "Ошибка при сохранении");
+        alert(msg || t("references.saveError"));
         setSaving(false);
         return;
       }
@@ -126,7 +128,7 @@ export default function EnvironmentsPage() {
       setLoading(true);
       await fetchItems();
     } catch {
-      alert("Ошибка при сохранении");
+      alert(t("references.saveError"));
     } finally {
       setSaving(false);
     }
@@ -137,10 +139,10 @@ export default function EnvironmentsPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">
-            Окружения
+            {t("references.environmentsTitle")}
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Справочник окружений (Тест, Бой и т.д.)
+            {t("references.environmentsSubtitle")}
           </p>
         </div>
         {isAdminOrSuperAdmin(currentUser) && !showForm && (
@@ -151,7 +153,7 @@ export default function EnvironmentsPage() {
             }}
             className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-medium rounded hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
           >
-            Добавить
+            {t("common.add")}
           </button>
         )}
       </div>
@@ -162,7 +164,7 @@ export default function EnvironmentsPage() {
           className="mb-6 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 p-5"
         >
           <h2 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
-            {editingId ? "Редактирование" : "Новое окружение"}
+            {editingId ? t("references.editing") : t("references.environmentsNew")}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {!editingId && (
@@ -178,7 +180,7 @@ export default function EnvironmentsPage() {
               </div>
             )}
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Русский</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t("references.ru")}</label>
               <input
                 type="text"
                 value={form.nameRu}
@@ -187,7 +189,7 @@ export default function EnvironmentsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Қазақша</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t("references.kz")}</label>
               <input
                 type="text"
                 value={form.nameKz}
@@ -196,7 +198,7 @@ export default function EnvironmentsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">English</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t("references.en")}</label>
               <input
                 type="text"
                 value={form.nameEn}
@@ -211,14 +213,14 @@ export default function EnvironmentsPage() {
               disabled={saving}
               className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-medium rounded hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors disabled:opacity-50"
             >
-              {saving ? "Сохранение..." : editingId ? "Сохранить" : "Создать"}
+              {saving ? t("references.saving") : editingId ? t("common.save") : t("references.create")}
             </button>
             <button
               type="button"
               onClick={resetForm}
               className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
-              Отмена
+              {t("common.cancel")}
             </button>
           </div>
         </form>
@@ -228,7 +230,7 @@ export default function EnvironmentsPage() {
         <div className="mb-4">
           <input
             type="text"
-            placeholder="Поиск по названию..."
+            placeholder={t("common.searchByName")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full max-w-md px-4 py-2 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500"
@@ -237,7 +239,7 @@ export default function EnvironmentsPage() {
       )}
 
       {loading && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">Загрузка...</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t("common.loading")}</p>
       )}
 
       {error && !loading && (
@@ -252,17 +254,17 @@ export default function EnvironmentsPage() {
             <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">№</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Русский</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Қазақша</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">English</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-28">Действия</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t("references.ru")}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t("references.kz")}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t("references.en")}</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-28">{t("references.actions")}</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-                    Записи не найдены
+                    {t("references.notFound")}
                   </td>
                 </tr>
               ) : (
@@ -278,7 +280,7 @@ export default function EnvironmentsPage() {
                           <button
                             onClick={() => handleEdit(item)}
                             className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                            title="Редактировать"
+                            title={t("references.editing")}
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -287,7 +289,7 @@ export default function EnvironmentsPage() {
                           <button
                             onClick={() => handleDelete(item.id)}
                             className="text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-                            title="Удалить"
+                            title={t("common.delete")}
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

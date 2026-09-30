@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
+import { useLanguage } from "../../components/LanguageProvider";
 
 interface Location {
   id: number;
@@ -20,6 +21,7 @@ function isAdminOrSuperAdmin(user: AuthUser | null): boolean {
 }
 
 export default function LocationsPage() {
+  const { t } = useLanguage();
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,11 +36,11 @@ export default function LocationsPage() {
   const fetchLocations = async () => {
     try {
       const res = await apiFetch("locations");
-      if (!res.ok) throw new Error("Не удалось загрузить местоположения");
+      if (!res.ok) throw new Error(t("references.locationsTitle"));
       const data = (await res.json()) as Location[];
       setLocations(data);
     } catch (e: any) {
-      setError(e.message ?? "Ошибка загрузки");
+      setError(e.message ?? t("common.error"));
     } finally {
       setLoading(false);
     }
@@ -77,7 +79,7 @@ export default function LocationsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Удалить местоположение?")) return;
+    if (!confirm(t("references.locationsDeleteConfirm"))) return;
     try {
       const res = await apiFetch(`locations/${id}`, {
         method: "DELETE",
@@ -85,7 +87,7 @@ export default function LocationsPage() {
       if (!res.ok) throw new Error();
       setLocations((prev) => prev.filter((l) => l.id !== id));
     } catch {
-      alert("Ошибка при удалении");
+      alert(t("references.deleteError"));
     }
   };
 
@@ -112,7 +114,7 @@ export default function LocationsPage() {
 
       if (!res.ok) {
         const msg = await res.text();
-        alert(msg || "Ошибка при сохранении");
+        alert(msg || t("references.saveError"));
         setSaving(false);
         return;
       }
@@ -121,7 +123,7 @@ export default function LocationsPage() {
       setLoading(true);
       await fetchLocations();
     } catch {
-      alert("Ошибка при сохранении");
+      alert(t("references.saveError"));
     } finally {
       setSaving(false);
     }
@@ -132,10 +134,10 @@ export default function LocationsPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">
-            Местоположения
+            {t("references.locationsTitle")}
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Справочник местоположений системы
+            {t("references.locationsSubtitle")}
           </p>
         </div>
         {isAdminOrSuperAdmin(currentUser) && !showForm && (
@@ -146,7 +148,7 @@ export default function LocationsPage() {
             }}
             className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-medium rounded hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
           >
-            Добавить
+            {t("common.add")}
           </button>
         )}
       </div>
@@ -157,7 +159,7 @@ export default function LocationsPage() {
           className="mb-6 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 p-5"
         >
           <h2 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
-            {editingId ? "Редактирование" : "Новое местоположение"}
+            {editingId ? t("references.editing") : t("references.locationsNew")}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {!editingId && (
@@ -176,7 +178,7 @@ export default function LocationsPage() {
             )}
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Русский
+                {t("references.ru")}
               </label>
               <input
                 type="text"
@@ -187,7 +189,7 @@ export default function LocationsPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Қазақша
+                {t("references.kz")}
               </label>
               <input
                 type="text"
@@ -198,7 +200,7 @@ export default function LocationsPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                English
+                {t("references.en")}
               </label>
               <input
                 type="text"
@@ -214,21 +216,21 @@ export default function LocationsPage() {
               disabled={saving}
               className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-medium rounded hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors disabled:opacity-50"
             >
-              {saving ? "Сохранение..." : editingId ? "Сохранить" : "Создать"}
+              {saving ? t("references.saving") : editingId ? t("common.save") : t("references.create")}
             </button>
             <button
               type="button"
               onClick={resetForm}
               className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
-              Отмена
+              {t("common.cancel")}
             </button>
           </div>
         </form>
       )}
 
       {loading && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">Загрузка...</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t("common.loading")}</p>
       )}
 
       {error && !loading && (
@@ -246,16 +248,16 @@ export default function LocationsPage() {
                   №
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Русский
+                  {t("references.ru")}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Қазақша
+                  {t("references.kz")}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  English
+                  {t("references.en")}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-28">
-                  Действия
+                  {t("references.actions")}
                 </th>
               </tr>
             </thead>
@@ -266,7 +268,7 @@ export default function LocationsPage() {
                     colSpan={5}
                     className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400"
                   >
-                    Местоположения не найдены
+                    {t("references.locationsNotFound")}
                   </td>
                 </tr>
               ) : (
@@ -293,7 +295,7 @@ export default function LocationsPage() {
                           <button
                             onClick={() => handleEdit(loc)}
                             className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                            title="Редактировать"
+                            title={t("references.editing")}
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -302,7 +304,7 @@ export default function LocationsPage() {
                           <button
                             onClick={() => handleDelete(loc.id)}
                             className="text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-                            title="Удалить"
+                            title={t("common.delete")}
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

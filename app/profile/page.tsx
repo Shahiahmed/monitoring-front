@@ -3,6 +3,36 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../lib/api";
 import PasswordFieldWithToggle from "../components/PasswordFieldWithToggle";
+import { useLanguage } from "../components/LanguageProvider";
+import { useTour } from "../components/TourProvider";
+
+function validatePassword(password: string, t: (k: string) => string): string | null {
+  if (password.length < 8) return t("profile.minChars");
+  if (!/[A-Z]/.test(password)) return t("profile.upperCase");
+  if (!/[a-z]/.test(password)) return t("profile.lowerCase");
+  if (!/[0-9]/.test(password)) return t("profile.digit");
+  return null;
+}
+
+function PasswordStrength({ password }: { password: string }) {
+  const { t } = useLanguage();
+  if (!password) return null;
+  const checks = [
+    { label: t("profile.minChars"), ok: password.length >= 8 },
+    { label: t("profile.upperCase"), ok: /[A-Z]/.test(password) },
+    { label: t("profile.lowerCase"), ok: /[a-z]/.test(password) },
+    { label: t("profile.digit"), ok: /[0-9]/.test(password) },
+  ];
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+      {checks.map(c => (
+        <span key={c.label} className={`text-xs flex items-center gap-1 ${c.ok ? "text-green-600 dark:text-green-400" : "text-gray-400 dark:text-gray-500"}`}>
+          {c.ok ? "✓" : "○"} {c.label}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 interface AuthUser {
   id: number;
@@ -16,6 +46,8 @@ interface AuthUser {
 }
 
 export default function ProfilePage() {
+  const { t } = useLanguage();
+  const { startTour } = useTour();
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarDeleting, setAvatarDeleting] = useState(false);
@@ -65,11 +97,11 @@ export default function ProfilePage() {
     if (!file || !user) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("Размер файла не должен превышать 5MB");
+      alert(t("profile.maxFileSize"));
       return;
     }
     if (!file.type.startsWith("image/")) {
-      alert("Файл должен быть изображением");
+      alert(t("profile.notAnImage"));
       return;
     }
 
@@ -86,7 +118,7 @@ export default function ProfilePage() {
 
       if (!res.ok) {
         const msg = await res.text();
-        alert(msg || "Не удалось загрузить аватар");
+        alert(msg || t("profile.uploading"));
         setAvatarUploading(false);
         return;
       }
@@ -105,7 +137,7 @@ export default function ProfilePage() {
         // ignore
       }
     } catch {
-      alert("Ошибка при загрузке аватара");
+      alert(t("common.saveError"));
     } finally {
       setAvatarUploading(false);
     }
@@ -116,14 +148,14 @@ export default function ProfilePage() {
     setAvatarDeleting(true);
     try {
       const res = await apiFetch(`users/${user.id}/avatar`, { method: "DELETE" });
-      if (!res.ok) { alert("Не удалось удалить фото"); return; }
+      if (!res.ok) { alert(t("common.deleteError")); return; }
       setAvatarPreview(null);
       setUser(prev => prev ? { ...prev, hasAvatar: false } : null);
       try {
         const raw = localStorage.getItem("authUser");
         if (raw) { const u = JSON.parse(raw) as AuthUser; u.hasAvatar = false; localStorage.setItem("authUser", JSON.stringify(u)); }
       } catch {}
-    } catch { alert("Ошибка при удалении фото"); }
+    } catch { alert(t("common.deleteError")); }
     finally { setAvatarDeleting(false); }
   };
 
@@ -148,17 +180,18 @@ export default function ProfilePage() {
     try {
       if (wantsPasswordChange) {
         if (!currentPassword || !newPassword || !confirmNewPassword) {
-          setError("Для смены пароля заполните все три поля");
+          setError(t("profile.pwdFillAll"));
           setIsSaving(false);
           return;
         }
         if (newPassword !== confirmNewPassword) {
-          setError("Новый пароль и подтверждение не совпадают");
+          setError(t("profile.pwdMismatch"));
           setIsSaving(false);
           return;
         }
-        if (newPassword.length < 6) {
-          setError("Новый пароль должен содержать минимум 6 символов");
+        const pwdError = validatePassword(newPassword, t);
+        if (pwdError) {
+          setError(pwdError);
           setIsSaving(false);
           return;
         }
@@ -174,7 +207,7 @@ export default function ProfilePage() {
 
         if (!passRes.ok) {
           const msg = await passRes.text();
-          setError(msg || "Не удалось сменить пароль");
+          setError(msg || t("common.saveError"));
           setIsSaving(false);
           return;
         }
@@ -208,7 +241,7 @@ export default function ProfilePage() {
 
       if (!res.ok) {
         const msg = await res.text();
-        setError(msg || "Не удалось сохранить профиль");
+        setError(msg || t("common.saveError"));
         setIsSaving(false);
         return;
       }
@@ -218,13 +251,13 @@ export default function ProfilePage() {
       localStorage.setItem("authUser", JSON.stringify(updated));
       setSuccess(
         wantsPasswordChange
-          ? "Пароль и данные профиля сохранены"
-          : "Данные сохранены",
+          ? t("profile.savedBoth")
+          : t("profile.savedData"),
       );
       setTimeout(() => setSuccess(null), 3000);
       setIsSaving(false);
     } catch {
-      setError("Ошибка при сохранении профиля");
+      setError(t("common.saveError"));
       setIsSaving(false);
     }
   };
@@ -235,10 +268,10 @@ export default function ProfilePage() {
         {/* Заголовок */}
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
-            Профиль
+            {t("profile.title")}
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Личные данные, аватар и настройки безопасности
+            {t("profile.subtitle")}
           </p>
         </div>
 
@@ -247,7 +280,7 @@ export default function ProfilePage() {
           <div className="lg:col-span-1">
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
               <h2 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
-                Аватар
+                {t("profile.avatar")}
               </h2>
 
               <div className="flex items-center space-x-4">
@@ -264,7 +297,7 @@ export default function ProfilePage() {
                       htmlFor="avatar"
                       className={`inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer ${avatarUploading || avatarDeleting ? "opacity-50 pointer-events-none" : ""}`}
                     >
-                      <span>{avatarUploading ? "Загрузка..." : "Изменить"}</span>
+                      <span>{avatarUploading ? t("profile.uploading") : t("profile.changePhoto")}</span>
                       <input
                         id="avatar"
                         type="file"
@@ -291,7 +324,7 @@ export default function ProfilePage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                           </svg>
                         )}
-                        {avatarDeleting ? "Удаление..." : "Удалить"}
+                        {avatarDeleting ? t("profile.deleting") : t("profile.deletePhoto")}
                       </button>
                     )}
                   </div>
@@ -300,6 +333,25 @@ export default function ProfilePage() {
                   </p>
                 </div>
               </div>
+            </div>
+
+            <div className="mt-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+              <h2 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                Обучение
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                Короткий тур по интерфейсу: шапка, меню, сводка и ИИ-ассистент.
+              </p>
+              <button
+                type="button"
+                onClick={startTour}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Пройти обучение заново
+              </button>
             </div>
           </div>
 
@@ -312,7 +364,7 @@ export default function ProfilePage() {
               {/* Личные данные */}
               <section>
                 <h2 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
-                  Личные данные
+                  {t("profile.personalInfo")}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -320,7 +372,7 @@ export default function ProfilePage() {
                       htmlFor="lastName"
                       className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                     >
-                      Фамилия
+                      {t("profile.lastName")}
                     </label>
                     <input
                       id="lastName"
@@ -329,7 +381,7 @@ export default function ProfilePage() {
                       value={form.lastName}
                       onChange={handleChange}
                       className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500"
-                      placeholder="Введите фамилию"
+                      placeholder={t("profile.lastName")}
                     />
                   </div>
                   <div>
@@ -337,7 +389,7 @@ export default function ProfilePage() {
                       htmlFor="firstName"
                       className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                     >
-                      Имя
+                      {t("profile.firstName")}
                     </label>
                     <input
                       id="firstName"
@@ -346,7 +398,7 @@ export default function ProfilePage() {
                       value={form.firstName}
                       onChange={handleChange}
                       className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500"
-                      placeholder="Введите имя"
+                      placeholder={t("profile.firstName")}
                     />
                   </div>
                   <div>
@@ -354,7 +406,7 @@ export default function ProfilePage() {
                       htmlFor="secondName"
                       className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                     >
-                      Отчество
+                      {t("profile.secondName")}
                     </label>
                     <input
                       id="secondName"
@@ -363,7 +415,7 @@ export default function ProfilePage() {
                       value={form.secondName}
                       onChange={handleChange}
                       className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500"
-                      placeholder="Отчество"
+                      placeholder={t("profile.secondName")}
                     />
                   </div>
                   <div>
@@ -382,7 +434,7 @@ export default function ProfilePage() {
                       readOnly
                     />
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Email изменяется только администратором системы
+                      {t("profile.emailReadOnly")}
                     </p>
                   </div>
                 </div>
@@ -391,14 +443,14 @@ export default function ProfilePage() {
               {/* Безопасность */}
               <section>
                 <h2 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
-                  Безопасность
+                  {t("profile.security")}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-1">
                     <PasswordFieldWithToggle
                       id="currentPassword"
                       name="currentPassword"
-                      label="Текущий пароль"
+                      label={t("profile.currentPassword")}
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       autoComplete="current-password"
@@ -409,18 +461,19 @@ export default function ProfilePage() {
                     <PasswordFieldWithToggle
                       id="newPassword"
                       name="newPassword"
-                      label="Новый пароль"
+                      label={t("profile.newPassword")}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       autoComplete="new-password"
                       disabled={isSaving}
                     />
+                    <PasswordStrength password={newPassword} />
                   </div>
                   <div>
                     <PasswordFieldWithToggle
                       id="confirmNewPassword"
                       name="confirmNewPassword"
-                      label="Подтверждение пароля"
+                      label={t("profile.confirmPasswordLabel")}
                       value={confirmNewPassword}
                       onChange={(e) => setConfirmNewPassword(e.target.value)}
                       autoComplete="new-password"
@@ -429,11 +482,11 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                  Оставьте поля пустыми, если не хотите изменять пароль
+                  {t("profile.leaveEmpty")}
                 </p>
                 <div className="mt-4">
                   <label htmlFor="passwordHint" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Подсказка к паролю
+                    {t("profile.passwordHint")}
                   </label>
                   <textarea
                     id="passwordHint"
@@ -443,10 +496,10 @@ export default function ProfilePage() {
                     rows={2}
                     disabled={isSaving}
                     className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500 resize-none disabled:opacity-50"
-                    placeholder="Введите подсказку для восстановления пароля"
+                    placeholder={t("profile.passwordHint")}
                   />
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Отображается на странице «Забыли пароль?»
+                    {t("profile.passwordHintInfo")}
                   </p>
                 </div>
               </section>
@@ -470,7 +523,7 @@ export default function ProfilePage() {
                   disabled={isSaving}
                   className="px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-medium rounded hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
-                  {isSaving ? "Сохранение..." : "Сохранить изменения"}
+                  {isSaving ? t("profile.saving") : t("profile.saveChanges")}
                 </button>
               </div>
             </form>

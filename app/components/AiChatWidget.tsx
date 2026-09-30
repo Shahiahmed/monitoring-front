@@ -216,7 +216,7 @@ export default function AiChatWidget() {
       )}
 
       {/* Toggle button */}
-      <button onClick={() => setOpen(v => !v)}
+      <button onClick={() => setOpen(v => !v)} data-tour="ai-chat"
         className="fixed bottom-6 right-6 z-50 w-13 h-13 rounded-2xl flex items-center justify-center ai-fab-btn transition-all duration-200 hover:scale-110 active:scale-95"
         title="ИИ Ассистент">
         <div className={`transition-transform duration-200 ${open ? 'rotate-180' : 'rotate-0'}`}>

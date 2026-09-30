@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { apiFetch, apiUrl } from "../lib/api";
+import { useLanguage } from "../components/LanguageProvider";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,7 @@ function logLineColor(line: string): string {
 }
 
 function LogDialog({ dep, onClose }: { dep: Deployment; onClose: () => void }) {
+  const { t } = useLanguage();
   const [logs, setLogs] = useState<string[]>([]);
   const [grep, setGrep] = useState("");
   const [running, setRunning] = useState(false);
@@ -95,7 +97,7 @@ function LogDialog({ dep, onClose }: { dep: Deployment; onClose: () => void }) {
         <div className="det-log-header">
           <div className="flex items-center gap-3">
             <div className="det-log-traffic">
-              <span className="det-traffic-dot bg-red-500" onClick={onClose} title="Закрыть" />
+              <span className="det-traffic-dot bg-red-500" onClick={onClose} title={t("common.close")} />
               <span className="det-traffic-dot bg-amber-400" />
               <span className="det-traffic-dot bg-emerald-500" />
             </div>
@@ -106,7 +108,7 @@ function LogDialog({ dep, onClose }: { dep: Deployment; onClose: () => void }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {logs.length > 0 && <span className="text-[11px] text-slate-500">{logs.length} строк</span>}
+            {logs.length > 0 && <span className="text-[11px] text-slate-500">{logs.length} {t("services.rowCount")}</span>}
             <button onClick={onClose} className="det-log-close-btn">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
@@ -116,13 +118,13 @@ function LogDialog({ dep, onClose }: { dep: Deployment; onClose: () => void }) {
         <div className="det-log-toolbar">
           <div className="det-log-grep-wrap" style={{flex:1}}>
             <svg className="det-log-grep-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            <input value={grep} onChange={e => setGrep(e.target.value)} placeholder="grep фильтр… (Enter для запуска)" className="det-log-grep" onKeyDown={e => e.key === "Enter" && startStream()} />
+            <input value={grep} onChange={e => setGrep(e.target.value)} placeholder={t("services.grepPlaceholder")} className="det-log-grep" onKeyDown={e => e.key === "Enter" && startStream()} />
           </div>
           <div className="flex items-center gap-1.5">
             <button onClick={startStream} disabled={running} className="det-log-run-btn">
-              {running ? <><span className="det-log-pulse" />Стриминг…</> : <><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>Запустить</>}
+              {running ? <><span className="det-log-pulse" />{t("services.streaming")}</> : <><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>{t("services.run")}</>}
             </button>
-            {running && <button onClick={stop} className="det-log-stop-btn"><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z" /></svg>Стоп</button>}
+            {running && <button onClick={stop} className="det-log-stop-btn"><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z" /></svg>{t("services.stop")}</button>}
           </div>
         </div>
 
@@ -130,20 +132,22 @@ function LogDialog({ dep, onClose }: { dep: Deployment; onClose: () => void }) {
           <label className="det-log-toggle">
             <input type="checkbox" checked={lineNumbers} onChange={e => setLineNumbers(e.target.checked)} className="sr-only" />
             <span className={`det-log-toggle-track ${lineNumbers ? "det-log-toggle-on" : ""}`} />
-            <span className="text-[11px] text-slate-500">№ строк</span>
+            <span className="text-[11px] text-slate-500">{t("services.lineNumbers")}</span>
           </label>
           <label className="det-log-toggle">
             <input type="checkbox" checked={autoScroll} onChange={e => setAutoScroll(e.target.checked)} className="sr-only" />
             <span className={`det-log-toggle-track ${autoScroll ? "det-log-toggle-on" : ""}`} />
-            <span className="text-[11px] text-slate-500">Автоскролл</span>
+            <span className="text-[11px] text-slate-500">{t("services.autoScroll")}</span>
           </label>
           <div className="flex-1" />
           <button onClick={() => setLogs([])} disabled={logs.length === 0} className="det-log-action-btn">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            Очистить
+            {t("services.clear")}
           </button>
           <button onClick={copyLogs} disabled={logs.length === 0} className="det-log-action-btn">
-            {copied ? <><svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Скопировано</> : <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>Копировать</>}
+            {copied
+              ? <><svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>{t("services.copied")}</>
+              : <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>{t("services.copy")}</>}
           </button>
         </div>
 
@@ -151,7 +155,7 @@ function LogDialog({ dep, onClose }: { dep: Deployment; onClose: () => void }) {
           {logs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-600">
               <svg className="w-10 h-10 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              <span className="text-[13px]">Нажмите «Запустить» для стриминга логов</span>
+              <span className="text-[13px]">{t("services.startStreaming")}</span>
             </div>
           ) : (
             <table className="det-log-table">
@@ -175,6 +179,7 @@ function LogDialog({ dep, onClose }: { dep: Deployment; onClose: () => void }) {
 // ── Main Page ──────────────────────────────────────────────────────────────
 
 export default function ServicesPage() {
+  const { t } = useLanguage();
   const [apps, setApps] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -219,7 +224,7 @@ export default function ServicesPage() {
         deployments: app.deployments.map(d => d.id === dep.id ? { ...d, ...updated } : d)
       })));
     } catch (e: any) {
-      alert("Ошибка: " + e.message);
+      alert(t("common.error") + ": " + e.message);
     } finally {
       setBusy(prev => { const s = new Set(prev); s.delete(dep.id); return s; });
     }
@@ -237,16 +242,16 @@ export default function ServicesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">Сервисы</h1>
+          <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">{t("services.title")}</h1>
           <p className="text-[12px] text-slate-400 dark:text-slate-500 mt-0.5">
-            Мониторинг сервисов — статус и просмотр логов
+            {t("services.subtitle")}
           </p>
         </div>
         <button onClick={load} className="svc-refresh-btn text-xs flex items-center gap-1.5">
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          Обновить
+          {t("services.refresh")}
         </button>
       </div>
 
@@ -255,25 +260,25 @@ export default function ServicesPage() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Поиск по названию или artifact ID…"
+          placeholder={t("services.searchPlaceholder")}
           className="svc-search flex-1 min-w-48"
         />
         <select value={envFilter} onChange={e => setEnvFilter(e.target.value)} className="svc-select">
-          <option value="all">Все окружения</option>
-          <option value="1">Тест</option>
-          <option value="2">Бой</option>
+          <option value="all">{t("services.allEnvs")}</option>
+          <option value="1">{t("services.test")}</option>
+          <option value="2">{t("services.prod")}</option>
         </select>
       </div>
 
       {/* Content */}
       {loading && (
-        <div className="flex justify-center py-16 text-slate-400 text-sm">Загрузка…</div>
+        <div className="flex justify-center py-16 text-slate-400 text-sm">{t("services.loading")}</div>
       )}
       {error && (
         <div className="rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 p-4 text-red-600 dark:text-red-400 text-sm">{error}</div>
       )}
       {!loading && !error && filtered.length === 0 && (
-        <div className="text-center py-16 text-slate-400 text-sm">Нет сервисов</div>
+        <div className="text-center py-16 text-slate-400 text-sm">{t("services.noServices")}</div>
       )}
 
       {!loading && !error && (
@@ -288,7 +293,7 @@ export default function ServicesPage() {
                 {/* App header row */}
                 <button
                   onClick={() => toggleExpand(app.id)}
-                  className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-slate-50/60 dark:hover:bg-white/[0.03] transition-colors"
+                  className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-slate-50/60 dark:hover:bg-white/3 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -301,11 +306,11 @@ export default function ServicesPage() {
                       )}
                     </div>
                     <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
-                      {app.description || "Нет описания"}
+                      {app.description || t("services.noDescription")}
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-[11px] text-slate-400">{visibleDeps.length} окруж.</span>
+                    <span className="text-[11px] text-slate-400">{visibleDeps.length} {t("services.deploymentsShort")}</span>
                     <svg className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -319,18 +324,18 @@ export default function ServicesPage() {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="bg-slate-50/80 dark:bg-slate-800/40 text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                          <th className="px-4 py-2.5 text-left font-semibold">Окружение</th>
-                          <th className="px-4 py-2.5 text-left font-semibold">Сервер</th>
-                          <th className="px-4 py-2.5 text-left font-semibold">Статус</th>
-                          <th className="px-4 py-2.5 text-left font-semibold">URL</th>
-                          {isAdmin && <th className="px-4 py-2.5 text-left font-semibold">Действия</th>}
+                          <th className="px-4 py-2.5 text-left font-semibold">{t("services.envCol")}</th>
+                          <th className="px-4 py-2.5 text-left font-semibold">{t("services.serverCol")}</th>
+                          <th className="px-4 py-2.5 text-left font-semibold">{t("services.statusCol")}</th>
+                          <th className="px-4 py-2.5 text-left font-semibold">{t("services.urlCol")}</th>
+                          {isAdmin && <th className="px-4 py-2.5 text-left font-semibold">{t("services.actionsCol")}</th>}
                         </tr>
                       </thead>
                       <tbody>
                         {visibleDeps.map((dep, idx) => {
                           const isBusy = busy.has(dep.id);
                           return (
-                            <tr key={dep.id} className={`border-t border-slate-100 dark:border-slate-700/30 ${idx % 2 === 0 ? "" : "bg-slate-50/30 dark:bg-white/[0.015]"}`}>
+                            <tr key={dep.id} className={`border-t border-slate-100 dark:border-slate-700/30 ${idx % 2 === 0 ? "" : "bg-slate-50/30 dark:bg-white/1.5"}`}>
                               <td className="px-4 py-3">
                                 <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${dep.envId === 2 ? "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400" : "bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400"}`}>
                                   {dep.envNameRu}
@@ -353,16 +358,16 @@ export default function ServicesPage() {
                                   {dep.canSsh ? (
                                     <div className="flex items-center gap-1.5">
                                       <button disabled={isBusy} onClick={() => refreshStatus(dep)}
-                                              title="Обновить статус" className="svc-action-btn svc-action-status">
+                                              title={t("services.refreshStatus")} className="svc-action-btn svc-action-status">
                                         {isBusy ? "…" : "⟳"}
                                       </button>
                                       <button onClick={() => setLogDep(dep)}
-                                              title="Логи" className="svc-action-btn svc-action-logs">
+                                              title={t("services.logs")} className="svc-action-btn svc-action-logs">
                                         ≡
                                       </button>
                                     </div>
                                   ) : (
-                                    <span className="text-slate-300 dark:text-slate-600 text-[10px]">нет SSH</span>
+                                    <span className="text-slate-300 dark:text-slate-600 text-[10px]">{t("services.noSsh")}</span>
                                   )}
                                 </td>
                               )}
@@ -375,7 +380,7 @@ export default function ServicesPage() {
                 )}
                 {isOpen && visibleDeps.length === 0 && (
                   <div className="px-5 py-4 text-[12px] text-slate-400 border-t border-slate-100 dark:border-slate-700/50">
-                    Нет развёртываний для выбранного окружения
+                    {t("services.noDeployments")}
                   </div>
                 )}
               </div>

@@ -5,16 +5,16 @@
 
 :root {
   --card-bg: #ffffff;
-  --card-border: #dbe6f3;
+  --card-border: #c8d9f0;
   --sidebar-width: 16rem;
-  /* Мягкие тени */
-  --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
-  --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
-  --shadow-card-hover: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
-  /* Стеклянный эффект */
-  --glass-bg: rgba(255, 255, 255, 0.82);
-  --glass-border: rgba(148, 163, 184, 0.28);
-  --glass-shadow: 0 12px 30px 0 rgba(37, 99, 235, 0.09);
+  /* Тени с синим оттенком — карточки "плавают" над фоном */
+  --shadow-soft: 0 1px 4px 0 rgba(30, 64, 175, 0.08), 0 1px 2px -1px rgba(30, 64, 175, 0.06);
+  --shadow-card: 0 2px 8px rgba(30, 64, 175, 0.08), 0 6px 20px rgba(30, 64, 175, 0.09);
+  --shadow-card-hover: 0 4px 16px rgba(30, 64, 175, 0.12), 0 12px 32px rgba(30, 64, 175, 0.13);
+  /* Стеклянный эффект — лёгкая синева */
+  --glass-bg: rgba(243, 249, 255, 0.93);
+  --glass-border: rgba(99, 140, 210, 0.30);
+  --glass-shadow: 0 8px 24px rgba(30, 64, 175, 0.10);
   /* Локальные шрифты без интернета (system fonts) */
   --font-geist-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-geist-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, "Liberation Mono", Menlo, monospace;
@@ -138,10 +138,13 @@
 }
 
 body {
-  background:
-    radial-gradient(1200px 600px at 20% -10%, rgba(59, 130, 246, 0.10), transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, rgba(14, 165, 233, 0.08), transparent 55%),
-    linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+  background-image:
+    radial-gradient(circle, rgba(59, 130, 246, 0.11) 1px, transparent 1px),
+    radial-gradient(ellipse 1400px 600px at 25% -8%, rgba(59, 130, 246, 0.22), transparent 58%),
+    radial-gradient(ellipse 900px 500px at 95% 8%, rgba(14, 165, 233, 0.14), transparent 52%),
+    radial-gradient(ellipse 600px 400px at 60% 90%, rgba(99, 102, 241, 0.08), transparent 55%),
+    linear-gradient(155deg, #d6e4f7 0%, #ddeaf8 35%, #cfddf2 70%, #d4e3f5 100%);
+  background-size: 22px 22px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
   font-family: var(--font-geist-sans);
   font-feature-settings: "kern" 1, "liga" 1;
   -webkit-font-smoothing: antialiased;
@@ -216,11 +219,12 @@ h3, .text-h3 {
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.97);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  box-shadow: 0 12px 32px 0 rgba(37, 99, 235, 0.10);
+  border: 1px solid rgba(99, 140, 210, 0.28);
+  box-shadow: 0 2px 8px rgba(30, 64, 175, 0.07), 0 8px 28px rgba(30, 64, 175, 0.11);
+  border-radius: 1rem;
 }
 
 html.dark .glass-card {

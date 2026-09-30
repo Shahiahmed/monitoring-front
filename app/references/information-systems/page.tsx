@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
+import { useLanguage } from "../../components/LanguageProvider";
 
 interface GovBody {
   id: number;
@@ -29,6 +30,7 @@ function isAdminOrSuperAdmin(user: AuthUser | null): boolean {
 }
 
 export default function InformationSystemsPage() {
+  const { t } = useLanguage();
   const [items, setItems] = useState<InfoSystem[]>([]);
   const [govBodies, setGovBodies] = useState<GovBody[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,13 +51,13 @@ export default function InformationSystemsPage() {
         apiFetch("information-systems"),
         apiFetch("government-bodies"),
       ]);
-      if (!isRes.ok || !goRes.ok) throw new Error("Не удалось загрузить данные");
+      if (!isRes.ok || !goRes.ok) throw new Error(t("common.error"));
       const isData = (await isRes.json()) as InfoSystem[];
       const goData = (await goRes.json()) as GovBody[];
       setItems(isData);
       setGovBodies(goData);
     } catch (e: any) {
-      setError(e.message ?? "Ошибка загрузки");
+      setError(e.message ?? t("common.error"));
     } finally {
       setLoading(false);
     }
@@ -107,24 +109,24 @@ export default function InformationSystemsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Удалить информационную систему?")) return;
+    if (!confirm(t("references.infoSystemsDeleteConfirm"))) return;
     try {
       const res = await apiFetch(`information-systems/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const msg = await res.text();
-        alert(msg || "Ошибка при удалении");
+        alert(msg || t("references.deleteError"));
         return;
       }
       setItems((prev) => prev.filter((l) => l.id !== id));
     } catch {
-      alert("Ошибка при удалении");
+      alert(t("references.deleteError"));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.goId) {
-      alert("Выберите государственный орган");
+      alert(t("references.selectGovBody"));
       return;
     }
     setSaving(true);
@@ -152,7 +154,7 @@ export default function InformationSystemsPage() {
 
       if (!res.ok) {
         const msg = await res.text();
-        alert(msg || "Ошибка при сохранении");
+        alert(msg || t("references.saveError"));
         setSaving(false);
         return;
       }
@@ -161,7 +163,7 @@ export default function InformationSystemsPage() {
       setLoading(true);
       await fetchAll();
     } catch {
-      alert("Ошибка при сохранении");
+      alert(t("references.saveError"));
     } finally {
       setSaving(false);
     }
@@ -172,10 +174,10 @@ export default function InformationSystemsPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">
-            Информационные системы
+            {t("references.infoSystemsTitle")}
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Справочник информационных систем с привязкой к государственным органам
+            {t("references.infoSystemsSubtitle")}
           </p>
         </div>
         {isAdminOrSuperAdmin(currentUser) && !showForm && (
@@ -183,7 +185,7 @@ export default function InformationSystemsPage() {
             onClick={() => { resetForm(); setShowForm(true); }}
             className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-medium rounded hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
           >
-            Добавить
+            {t("common.add")}
           </button>
         )}
       </div>
@@ -194,7 +196,7 @@ export default function InformationSystemsPage() {
           className="mb-6 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 p-5"
         >
           <h2 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
-            {editingId ? "Редактирование" : "Новая информационная система"}
+            {editingId ? t("references.editing") : t("references.infoSystemsNew")}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {!editingId && (
@@ -210,14 +212,14 @@ export default function InformationSystemsPage() {
               </div>
             )}
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Гос орган</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t("references.govBodyCol")}</label>
               <select
                 required
                 value={form.goId}
                 onChange={(e) => setForm({ ...form, goId: e.target.value })}
                 className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500"
               >
-                <option value="">Выберите гос орган</option>
+                <option value="">{t("references.selectGovBody")}</option>
                 {govBodies.map((go) => (
                   <option key={go.id} value={go.id}>
                     {go.nameRu || `ID: ${go.id}`}
@@ -226,7 +228,7 @@ export default function InformationSystemsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Русский</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t("references.ru")}</label>
               <input
                 type="text"
                 value={form.nameRu}
@@ -235,7 +237,7 @@ export default function InformationSystemsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Қазақша</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t("references.kz")}</label>
               <input
                 type="text"
                 value={form.nameKz}
@@ -244,7 +246,7 @@ export default function InformationSystemsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">English</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t("references.en")}</label>
               <input
                 type="text"
                 value={form.nameEn}
@@ -253,7 +255,7 @@ export default function InformationSystemsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Порядок сортировки</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t("references.sortOrderLabel")}</label>
               <input
                 type="number"
                 min={0}
@@ -271,7 +273,7 @@ export default function InformationSystemsPage() {
                 className="h-4 w-4 accent-blue-600 cursor-pointer"
               />
               <label htmlFor="includeInAvailability" className="text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
-                Учитывать в % доступности
+                {t("references.includeAvailabilityLabel")}
               </label>
             </div>
           </div>
@@ -281,14 +283,14 @@ export default function InformationSystemsPage() {
               disabled={saving}
               className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-medium rounded hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors disabled:opacity-50"
             >
-              {saving ? "Сохранение..." : editingId ? "Сохранить" : "Создать"}
+              {saving ? t("references.saving") : editingId ? t("common.save") : t("references.create")}
             </button>
             <button
               type="button"
               onClick={resetForm}
               className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
-              Отмена
+              {t("common.cancel")}
             </button>
           </div>
         </form>
@@ -298,7 +300,7 @@ export default function InformationSystemsPage() {
         <div className="mb-4">
           <input
             type="text"
-            placeholder="Поиск по названию или гос органу..."
+            placeholder={t("references.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full max-w-md px-4 py-2 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-500"
@@ -307,7 +309,7 @@ export default function InformationSystemsPage() {
       )}
 
       {loading && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">Загрузка...</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t("common.loading")}</p>
       )}
 
       {error && !loading && (
@@ -322,18 +324,18 @@ export default function InformationSystemsPage() {
             <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 <th className="w-14 px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">№</th>
-                <th className="w-16 px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Порядок</th>
-                <th className="w-[35%] px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Название</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Гос орган</th>
-                <th className="w-28 px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">% доступн.</th>
-                <th className="w-24 px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Действия</th>
+                <th className="w-16 px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t("references.sortOrder")}</th>
+                <th className="w-[35%] px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t("common.name")}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t("references.govBodyCol")}</th>
+                <th className="w-28 px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t("references.includeAvailability")}</th>
+                <th className="w-24 px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t("references.actions")}</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-                    Записи не найдены
+                    {t("references.notFound")}
                   </td>
                 </tr>
               ) : (
@@ -357,11 +359,11 @@ export default function InformationSystemsPage() {
                     <td className="px-4 py-3 text-right">
                       {isAdminOrSuperAdmin(currentUser) && (
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => handleEdit(item)} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white" title="Редактировать">
+                          <button onClick={() => handleEdit(item)} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white" title={t("references.editing")}>
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                           </button>
-                          <button onClick={() => handleDelete(item.id)} className="text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" title="Удалить">
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6м1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          <button onClick={() => handleDelete(item.id)} className="text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" title={t("common.delete")}>
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           </button>
                         </div>
                       )}

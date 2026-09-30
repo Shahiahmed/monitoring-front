@@ -13,6 +13,10 @@ interface Server {
   ip: string | null;
   envId: number | null;
   envNameRu: string | null;
+  warnRam: number | null;
+  warnDisk: number | null;
+  critRam: number | null;
+  critDisk: number | null;
 }
 
 interface ServerMetrics {
@@ -884,7 +888,48 @@ export default function ServersPage() {
       </div>
 
       {loading && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">Загрузка...</p>
+        <div className="srv-skeleton-wrap">
+          {/* Скелетон графика */}
+          <div className="glass-card rounded-xl p-4 mb-8">
+            <div className="flex justify-end mb-3">
+              <div className="srv-sk h-8 w-48 rounded-lg" />
+            </div>
+            <div className="srv-sk rounded-lg w-full h-80" />
+          </div>
+          {/* Скелетон карточек */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="glass-card rounded-xl p-4">
+                {/* Заголовок карточки */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="srv-sk h-5 w-32 rounded" />
+                    <div className="srv-sk h-5 w-14 rounded-full" />
+                  </div>
+                  <div className="srv-sk h-4 w-16 rounded-full" />
+                </div>
+                {/* Описание */}
+                <div className="srv-sk h-3.5 w-40 rounded mb-4" />
+                {/* Два круговых графика */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="srv-sk rounded-full w-24 h-24" />
+                    <div className="srv-sk h-3 w-10 rounded" />
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="srv-sk rounded-full w-24 h-24" />
+                    <div className="srv-sk h-3 w-10 rounded" />
+                  </div>
+                </div>
+                {/* Строки данных */}
+                <div className="mt-3 space-y-1.5">
+                  <div className="srv-sk h-3 w-full rounded" />
+                  <div className="srv-sk h-3 w-5/6 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {error && !loading && (
@@ -933,17 +978,25 @@ export default function ServersPage() {
           {/* Карточки серверов */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {prodServers.map((s, index) => {
-              const memAvailableGb =
-                (metricsMap[s.id]?.memoryAvailableMb ??
-                  (metricsMap[s.id]?.memoryTotalMb ?? 0) -
-                    (metricsMap[s.id]?.memoryUsedMb ?? 0)) / 1024;
-              const lowRam = memAvailableGb > 0 && memAvailableGb < 20;
+              const freeRamGb = (metricsMap[s.id]?.memoryAvailableMb ??
+                Math.max(0, (metricsMap[s.id]?.memoryTotalMb ?? 0) - (metricsMap[s.id]?.memoryUsedMb ?? 0))) / 1024;
+              const freeDiskGb = Math.max(0,
+                (metricsMap[s.id]?.diskTotalGb ?? 0) - (metricsMap[s.id]?.diskUsedGb ?? 0));
+              const hasMetrics = !metricsMap[s.id]?.error && (freeRamGb > 0 || freeDiskGb > 0);
+              const ramCrit  = hasMetrics && s.critRam  != null && freeRamGb  < s.critRam;
+              const diskCrit = hasMetrics && s.critDisk != null && freeDiskGb < s.critDisk;
+              const ramWarn  = hasMetrics && s.warnRam  != null && freeRamGb  < s.warnRam;
+              const diskWarn = hasMetrics && s.warnDisk != null && freeDiskGb < s.warnDisk;
+              const isCrit = ramCrit || diskCrit;
+              const isWarn = !isCrit && (ramWarn || diskWarn);
               return (
                 <div
                   key={s.id}
                   onClick={() => router.push(`/servers/detail?id=${s.id}`)}
                   className={`glass-card rounded-xl p-4 transition-all duration-200 hover:shadow-card-hover cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
-                    lowRam ? "border-2! border-red-500! dark:border-red-500! animate-warning-card" : ""
+                    isCrit ? "border-2! border-red-500! dark:border-red-500! animate-warning-card"
+                    : isWarn ? "border-2! border-amber-400! dark:border-amber-400!"
+                    : ""
                   }`}
                   title="Нажмите для подробной информации"
                 >
@@ -960,10 +1013,22 @@ export default function ServersPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
-                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        Активен
-                      </span>
+                      {isCrit && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 dark:text-red-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />Критично
+                        </span>
+                      )}
+                      {isWarn && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />Внимание
+                        </span>
+                      )}
+                      {!isCrit && !isWarn && (
+                        <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                          Активен
+                        </span>
+                      )}
                       <svg
                         className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0"
                         viewBox="0 0 24 24"
@@ -1121,6 +1186,22 @@ export default function ServersPage() {
       )}
 
       <style jsx global>{`
+        /* Skeleton */
+        .srv-sk {
+          background: ${isDark
+            ? "linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%)"
+            : "linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%)"};
+          background-size: 200% 100%;
+          animation: srv-shimmer 1.4s ease-in-out infinite;
+        }
+        @keyframes srv-shimmer {
+          0%   { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        .srv-skeleton-wrap { animation: srv-fade-in 0.2s ease; }
+        @keyframes srv-fade-in { from { opacity: 0 } to { opacity: 1 } }
+
+        /* Modal */
         .srv-modal-overlay {
           position: fixed; inset: 0; z-index: 50;
           background: rgba(0,0,0,0.45);

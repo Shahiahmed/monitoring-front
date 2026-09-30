@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
+import { useLanguage } from "../../components/LanguageProvider";
 
 interface ActivityLogEntry {
   id: number;
@@ -21,23 +22,38 @@ interface PageResponse {
   number: number;
 }
 
-const ACTION_LABELS: Record<string, { label: string; color: string }> = {
-  LOGIN:          { label: "Вход",             color: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" },
-  REGISTER:       { label: "Регистрация",      color: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" },
-  DELETE_USER:    { label: "Удаление польз.",  color: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" },
-  DELETE:         { label: "Удаление",         color: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" },
-  UPDATE:         { label: "Изменение",        color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
-  UPDATE_PROFILE: { label: "Изм. профиля",    color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
-  ACTIVATE:       { label: "Активация",        color: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300" },
-  DEACTIVATE:     { label: "Деактивация",      color: "bg-slate-100 text-slate-600 dark:bg-slate-700/40 dark:text-slate-300" },
+const ACTION_COLORS: Record<string, string> = {
+  LOGIN:          "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  REGISTER:       "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  DELETE_USER:    "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  DELETE:         "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  UPDATE:         "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  UPDATE_PROFILE: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  ACTIVATE:       "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
+  DEACTIVATE:     "bg-slate-100 text-slate-600 dark:bg-slate-700/40 dark:text-slate-300",
 };
 
-const ENTITY_LABELS: Record<string, string> = {
-  USER:       "Пользователь",
-  INCIDENT:   "Инцидент",
-  WORK:       "Работа",
-  PRTG_ALERT: "Тревога PRTG",
-};
+function getActionLabels(t: (k: string) => string): Record<string, { label: string; color: string }> {
+  return {
+    LOGIN:          { label: t("activity.login"),         color: ACTION_COLORS.LOGIN },
+    REGISTER:       { label: t("activity.register"),      color: ACTION_COLORS.REGISTER },
+    DELETE_USER:    { label: t("activity.deleteUser"),    color: ACTION_COLORS.DELETE_USER },
+    DELETE:         { label: t("activity.delete"),        color: ACTION_COLORS.DELETE },
+    UPDATE:         { label: t("activity.update"),        color: ACTION_COLORS.UPDATE },
+    UPDATE_PROFILE: { label: t("activity.updateProfile"), color: ACTION_COLORS.UPDATE_PROFILE },
+    ACTIVATE:       { label: t("activity.activate"),      color: ACTION_COLORS.ACTIVATE },
+    DEACTIVATE:     { label: t("activity.deactivate"),    color: ACTION_COLORS.DEACTIVATE },
+  };
+}
+
+function getEntityLabels(t: (k: string) => string): Record<string, string> {
+  return {
+    USER:       t("activity.entityUser"),
+    INCIDENT:   t("activity.entityIncident"),
+    WORK:       t("activity.entityWork"),
+    PRTG_ALERT: t("activity.entityPrtg"),
+  };
+}
 
 const PAGE_SIZE = 30;
 
@@ -51,6 +67,9 @@ function formatDateTime(iso: string) {
 }
 
 export default function ActivityPage() {
+  const { t } = useLanguage();
+  const ACTION_LABELS = getActionLabels(t);
+  const ENTITY_LABELS = getEntityLabels(t);
   const [page, setPage]         = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
@@ -64,7 +83,7 @@ export default function ActivityPage() {
   useEffect(() => {
     setLoading(true);
     apiFetch(`activity-log?page=${page}&size=${PAGE_SIZE}`)
-      .then((r) => { if (!r.ok) throw new Error("Ошибка загрузки"); return r.json(); })
+      .then((r) => { if (!r.ok) throw new Error(t("activity.loadError")); return r.json(); })
       .then((data: PageResponse) => {
         setEntries(data.content);
         setTotalPages(data.totalPages);
@@ -95,7 +114,7 @@ export default function ActivityPage() {
   return (
     <div className="px-6 py-8">
       <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white mb-6">
-        Журнал действий
+        {t("activity.title")}
       </h1>
 
       <section className="rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
@@ -103,12 +122,12 @@ export default function ActivityPage() {
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700/60 flex flex-wrap items-center gap-3">
           <span className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
             <span className="w-2 h-4 rounded-full bg-blue-500" />
-            Действия пользователей
+            {t("activity.userActions")}
           </span>
           <div className="flex items-center gap-2 ml-auto flex-wrap">
             <input
               type="text"
-              placeholder="Поиск по email, описанию…"
+              placeholder={t("activity.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-1.5 w-60 focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -118,13 +137,13 @@ export default function ActivityPage() {
               onChange={(e) => setActionFilter(e.target.value)}
               className="text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
-              <option value="all">Все действия</option>
+              <option value="all">{t("activity.allActions")}</option>
               {allActions.map((a) => (
                 <option key={a} value={a}>{ACTION_LABELS[a]?.label ?? a}</option>
               ))}
             </select>
             <span className="text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
-              {totalElements} записей
+              {totalElements} {t("activity.records")}
             </span>
           </div>
         </div>
@@ -132,7 +151,7 @@ export default function ActivityPage() {
         {/* Таблица */}
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="py-12 text-center text-slate-500 dark:text-slate-400 text-sm">Загрузка...</div>
+            <div className="py-12 text-center text-slate-500 dark:text-slate-400 text-sm">{t("common.loading")}</div>
           ) : error ? (
             <div className="py-12 text-center text-red-500 text-sm">{error}</div>
           ) : filtered.length === 0 ? (
@@ -142,17 +161,17 @@ export default function ActivityPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
               </div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Записей не найдено</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t("activity.notFound")}</p>
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/50">
-                  <th className="text-left py-3 px-4 font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">Время</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">{t("activity.time")}</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-500 dark:text-slate-400">Email</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-500 dark:text-slate-400">Действие</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-500 dark:text-slate-400">Объект</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-500 dark:text-slate-400">Описание</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-500 dark:text-slate-400">{t("activity.action")}</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-500 dark:text-slate-400">{t("activity.object")}</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-500 dark:text-slate-400">{t("common.description")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -190,7 +209,7 @@ export default function ActivityPage() {
         {totalPages > 1 && (
           <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-700/60 flex items-center justify-between gap-4">
             <span className="text-xs text-slate-500 dark:text-slate-400">
-              Стр. {page + 1} из {totalPages} &nbsp;·&nbsp; {totalElements} записей
+              {t("activity.page")} {page + 1} {t("activity.of")} {totalPages} &nbsp;·&nbsp; {totalElements} {t("activity.records")}
             </span>
             <div className="flex items-center gap-1">
               <button onClick={() => goTo(0)} disabled={page === 0}
